@@ -16,9 +16,17 @@
 
 import type { CartItem, Product } from "./types";
 
-const SPREADSHEET_ID =
-  process.env.GOOGLE_SHEET_ID ?? "1KJaCG0tsZQQakf2h09cJiswZqjQQTdex8UwkygJliIQ";
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? "Oficial";
+
+function getSpreadsheetId(): string {
+  const id = process.env.GOOGLE_SHEET_ID;
+  if (!id) {
+    throw new Error(
+      "GOOGLE_SHEET_ID no está configurada. Agrega la variable en Vercel → Settings → Environment Variables."
+    );
+  }
+  return id;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,7 +79,7 @@ function parseCSV(text: string): string[][] {
  */
 async function fetchSheetRows(): Promise<string[][]> {
   // CSV export — no auth required if sheet is public
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${getSpreadsheetId()}/export?format=csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
   const res = await fetch(url, {
     next: { revalidate: 60 }, // ISR: refetch every 60 s

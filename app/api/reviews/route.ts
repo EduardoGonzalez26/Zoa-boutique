@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-const SHEET_ID = process.env.GOOGLE_SHEET_ID ?? "1KJaCG0tsZQQakf2h09cJiswZqjQQTdex8UwkygJliIQ";
+const SHEET_ID = process.env.GOOGLE_SHEET_ID ?? "";
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL ?? "";
 
 // ── GET: fetch real reviews for a product ─────────────────────────────────────
@@ -13,6 +13,11 @@ export async function GET(req: NextRequest) {
   const productId = req.nextUrl.searchParams.get("productId") ?? "";
 
   try {
+    if (!SHEET_ID) {
+      console.warn("[reviews] GOOGLE_SHEET_ID no está configurada — no se pueden leer reseñas.");
+      return NextResponse.json({ reviews: [] });
+    }
+
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Rese%C3%B1as`;
     const res = await fetch(url, { next: { revalidate: 60 } });
     if (!res.ok) return NextResponse.json({ reviews: [] });
