@@ -1,34 +1,72 @@
-/* ── Tailwind v4 ── */
+/* ══════════════════════════════════════════════════════════════
+   ZOA BOUTIQUE — DESIGN SYSTEM v4 · EDITORIAL ATELIER
+   Fuente de verdad: design-system/zoa-boutique/MASTER.md
+   Estética: retail editorial (arena dominante, bandas slate/wine,
+   hairlines de 1px) con escala tipográfica dramática y ritmo
+   de secciones. Tema por defecto: CLARO (light-first).
+   Ley de color: #EAE9E5 · #2B3C42 · #003628 · #420D0D · #FFF7F5
+   ══════════════════════════════════════════════════════════════ */
 @import "tailwindcss";
 
-/* ── Zoa Design Tokens ── */
-@theme {
-  /* Colors */
-  --color-cream:       #FAF8F5;
-  --color-cream-dark:  #F2EDE7;
-  --color-stone-100:   #EDE8E2;
-  --color-stone-200:   #D9D1C7;
-  --color-stone-400:   #A89F95;
-  --color-stone-600:   #6E655C;
-  --color-charcoal:    #1C1917;
-  --color-charcoal-80: rgba(28,25,23,0.8);
-  --color-gold:        #C9A96E;
-  --color-gold-light:  #E2C99A;
+/* ──────────────────────────────────────────────────────────────
+   TOKENS
+   ────────────────────────────────────────────────────────────── */
+/* `static`: emite TODAS las variables del bloque (aunque no haya utility usada),
+   para que var(--ease-out-quint), var(--color-*) etc. funcionen en CSS a mano. */
+@theme static {
+  /* ── Marca Zoa v3 (exactos) ───────────────────────────────── */
+  --color-zoa-sand:         #EAE9E5;
+  --color-zoa-slate:        #2B3C42;
+  --color-zoa-slate-900:    #1E2A2F;
+  --color-zoa-slate-60:     rgba(43, 60, 66, 0.62);
+  --color-zoa-line:         rgba(43, 60, 66, 0.16);
+  --color-zoa-line-strong:  rgba(43, 60, 66, 0.35);
+  --color-zoa-forest:       #003628;
+  --color-zoa-forest-dark:  #00251B;
+  --color-zoa-surface:      #FFF7F5;
+  --color-zoa-wine:         #420D0D;
+  --color-zoa-success:      #003628;
+  --color-zoa-error:        #420D0D;
 
-  /* Fonts — injected by next/font in layout.tsx */
-  --font-serif:  var(--font-marcellus, "Didot", "Big Caslon", "Georgia", serif);
-  --font-sans:   var(--font-inter, "system-ui", sans-serif);
+  /* ── Tipografía v3 (inyectadas por next/font en layout.tsx) ── */
+  --font-sans:    var(--font-archivo, "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif);
+  --font-display: var(--font-bodoni, "Bodoni Moda", Didot, "Times New Roman", serif);
 
-  /* Transitions */
-  --transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* ── Movimiento ───────────────────────────────────────────── */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-std:       cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Border radius */
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
+  /* ── Forma ────────────────────────────────────────────────── */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+
+  /* ── Sombra (casi nula) ───────────────────────────────────── */
+  --shadow-card: 0 1px 2px rgba(43, 60, 66, 0.05);
+
+  /* ── Hairline editorial ───────────────────────────────────── */
+  --border-hairline: 1px solid var(--color-zoa-line);
+
+  /* ── v4 · Movimiento ──────────────────────────────────────── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-hover:  240ms;
+  --dur-enter:  700ms;
+  --dur-reveal: 950ms;
+
+  /* ── v4 · Contenedor maestro y ritmo vertical ─────────────── */
+  --container-zoa: 1600px;
+  --space-section: clamp(5rem, 9vw, 9rem);
+
+  /* ── v4 · Tinta inversa (bandas slate y wine) ─────────────── */
+  --color-zoa-line-inverse:      rgba(255, 247, 245, 0.16);
+  --color-zoa-line-inverse-35:   rgba(255, 247, 245, 0.35);
+  --color-zoa-slate-inverse-60:  rgba(255, 247, 245, 0.62);
 }
 
-/* ── Globals ── */
+/* ──────────────────────────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 html {
@@ -36,50 +74,59 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 16px;
+  scrollbar-color: var(--color-zoa-slate-60) var(--color-zoa-sand);
 }
 
 body {
-  background-color: var(--color-cream);
-  color: var(--color-charcoal);
+  background-color: var(--color-zoa-sand);
+  color: var(--color-zoa-slate);
   font-family: var(--font-sans);
   font-size: 1rem;
-  font-weight: 300;
-  letter-spacing: 0.01em;
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 1.65;
 }
 
+/* Headings por defecto: Archivo (Bodoni solo donde manda el MASTER) */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 400;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
+  letter-spacing: 0;
+  line-height: 1.1;
 }
 
-/* ── Global rounded corners (subtle, luxury feel) ── */
+/* Esquinas 0–2px: 2px por defecto en controles */
 button, input, textarea, select {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xs);
 }
-
-/* Card-like surfaces */
-.rounded-card { border-radius: var(--radius-lg); }
 
 ::selection {
-  background-color: var(--color-gold-light);
-  color: var(--color-charcoal);
+  background-color: rgba(43, 60, 66, 0.15);
+  color: var(--color-zoa-slate);
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--color-cream); }
-::-webkit-scrollbar-thumb { background: var(--color-stone-200); border-radius: 99px; }
+/* Scrollbar 6px slate/sand */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-zoa-sand); }
+::-webkit-scrollbar-thumb { background: var(--color-zoa-slate-60); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-zoa-slate); }
 
-/* ── Utilities ── */
-.font-serif { font-family: var(--font-serif); }
-.font-sans  { font-family: var(--font-sans); }
+/* Anillo de foco global (slate) */
+:focus-visible {
+  outline: 2px solid var(--color-zoa-slate);
+  outline-offset: 2px;
+}
 
-/* ══════════════════════════════════════════════════
-   MercadoPago Payment Brick — Brand overrides
-   ══════════════════════════════════════════════════ */
+/* ──────────────────────────────────────────────────────────────
+   UTILIDADES EDITORIALES
+   ────────────────────────────────────────────────────────────── */
+
+/* Hairline reutilizable */
+.border-hairline { border: var(--border-hairline); }
+
+/* ══════════════════════════════════════════════════════════════
+   MercadoPago Payment Brick — Brand overrides (v3: slate/verde/vino)
+   ══════════════════════════════════════════════════════════════ */
 
 /* 1. Ocultar el título "Medios de pago" duplicado */
 [class*="title--medium"],[class*="heading-h2"],[class*="mp-form-title"] {
@@ -102,6 +149,13 @@ button, input, textarea, select {
   touch-action: manipulation !important;
   -webkit-user-select: text !important;
   user-select: text !important;
+}
+
+/* 4. Esquinas 0–2px alineadas al sistema (excepto radio/checkbox) */
+[id*="PaymentBrick"] input:not([type="radio"]):not([type="checkbox"]),
+[id*="paymentBrick"] input:not([type="radio"]):not([type="checkbox"]),
+[id*="PaymentBrick"] button,[id*="paymentBrick"] button {
+  border-radius: var(--radius-xs) !important;
 }
 
 /* ── Carousel — smooth touch scroll ── */
@@ -127,6 +181,9 @@ button, input, textarea, select {
 @media (min-width: 1024px) {
   .carousel-wrap { scroll-padding-left: 2.5rem; } /* lg: matches spacer w-10 */
 }
+@media (min-width: 1280px) {
+  .carousel-wrap { scroll-padding-left: 5rem; } /* xl: matches spacer w-20 del contenedor 1600px */
+}
 
 /* ── Anti-zoom en iOS: inputs necesitan min 16px para no hacer zoom ── */
 @media (max-width: 1023px) {
@@ -143,28 +200,21 @@ button, input, textarea, select {
 }
 
 /* ── Navbar: --nc CSS variable drives nav text color ──
-   DEFAULT: white (correct for home hero before JS hydration)
+   DEFAULT: off-white (correct for home hero before JS hydration)
    After React sets data-home and data-scrolled, color updates:
-   - Home + not scrolled → white
-   - Scrolled or non-home → charcoal
+   - Home + not scrolled → #FFF7F5
+   - Scrolled or non-home → slate
    ====================================================================== */
 .zoa-navbar {
-  --nc: #ffffff; /* default white for home hero SSR */
+  --nc: #FFF7F5; /* default off-white for home hero SSR */
 }
-/* After React hydration: non-home pages get charcoal */
+/* After React hydration: non-home pages get slate */
 .zoa-navbar[data-home="false"] {
-  --nc: var(--color-charcoal);
+  --nc: var(--color-zoa-slate);
 }
-/* Scrolled state always gets charcoal */
+/* Scrolled state always gets slate */
 .zoa-navbar[data-scrolled="true"] {
-  --nc: var(--color-charcoal);
-}
-/* Dropdown menus always stay dark */
-.zoa-navbar ul a,
-.zoa-navbar ul li,
-.zoa-navbar ul span,
-.zoa-navbar ul {
-  color: var(--color-charcoal) !important;
+  --nc: var(--color-zoa-slate);
 }
 
 /* ── Product Card: CSS-only hover (no JS state) ── */
@@ -187,4 +237,166 @@ button, input, textarea, select {
     top: 0 !important;
     bottom: 0 !important;
   }
+}
+
+/* ── Product Card: micro-fila de tallas al hover (solo pointer fino) ── */
+.product-card-sizes {
+  opacity: 0;
+  transition: opacity var(--dur-hover) var(--ease-std);
+}
+@media (hover: hover) and (pointer: fine) {
+  .product-card-root:hover .product-card-sizes { opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UTILIDADES v4 · EDITORIAL ATELIER
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Contenedor maestro: 1600px + gutters editoriales ── */
+.container-zoa {
+  width: 100%;
+  max-width: var(--container-zoa);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px)  { .container-zoa { padding-inline: 2.5rem; } }
+@media (min-width: 1280px) { .container-zoa { padding-inline: 5rem; } }
+
+/* ── Hairlines de 1px (arena) ── */
+.hairline    { border: 1px solid var(--color-zoa-line); }
+.hairline-t  { border-top: 1px solid var(--color-zoa-line); }
+.hairline-b  { border-bottom: 1px solid var(--color-zoa-line); }
+.hairline-l  { border-left: 1px solid var(--color-zoa-line); }
+.hairline-r  { border-right: 1px solid var(--color-zoa-line); }
+
+/* ── Hairlines inversos (sobre bandas slate / wine) ── */
+.hairline-inverse    { border: 1px solid var(--color-zoa-line-inverse); }
+.hairline-inverse-t  { border-top: 1px solid var(--color-zoa-line-inverse); }
+.hairline-inverse-b  { border-bottom: 1px solid var(--color-zoa-line-inverse); }
+.hairline-inverse-l  { border-left: 1px solid var(--color-zoa-line-inverse); }
+.hairline-inverse-r  { border-right: 1px solid var(--color-zoa-line-inverse); }
+
+/* ── Overline editorial ── */
+.overline {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  color: var(--color-zoa-slate-60);
+}
+.overline-on-dark {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  color: var(--color-zoa-slate-inverse-60);
+}
+
+/* ── Micro-label (10px / 0.22em) ── */
+.micro-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+/* ── Subrayado que crece 0 → 100% ── */
+.link-underline { position: relative; }
+.link-underline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-hover) var(--ease-out-quint);
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after { transform: scaleX(1); }
+
+/* ── Reveal de imagen: máscara clip-path + zoom ── */
+.img-reveal {
+  clip-path: inset(10% 0 0 0);
+  transition: clip-path var(--dur-reveal) var(--ease-out-expo);
+}
+.img-reveal.is-revealed { clip-path: inset(0 0 0 0); }
+.img-reveal > img,
+.img-reveal > .img-reveal-media {
+  transform: scale(1.06);
+  transition: transform var(--dur-reveal) var(--ease-out-expo);
+}
+.img-reveal.is-revealed > img,
+.img-reveal.is-revealed > .img-reveal-media { transform: scale(1); }
+
+/* ── Marquee lineal infinito (pausa al hover) ── */
+.marquee-wrap { overflow: hidden; }
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: zoa-marquee var(--marquee-duration, 40s) linear infinite;
+}
+.marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+@keyframes zoa-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ── Numerales tabulares ── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Balance de línea en titulares ── */
+.text-balance { text-wrap: balance; }
+
+/* ── Sin scrollbar ── */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ── Raíl vertical (writing-mode) ── */
+.vertical-rl { writing-mode: vertical-rl; }
+
+/* ── Solo apuntador fino (hover real, no táctil) ── */
+.pointer-fine-only { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .pointer-fine-only { display: block; }
+}
+.pointer-coarse-only { display: block; }
+@media (hover: hover) and (pointer: fine) {
+  .pointer-coarse-only { display: none; }
+}
+
+/* ── FAB de WhatsApp: se retira cuando una barra sticky inferior (PDP) está visible ── */
+.zoa-whatsapp { transition: opacity var(--dur-hover) var(--ease-std), transform var(--dur-hover) var(--ease-std); }
+body.zoa-hide-fab .zoa-whatsapp {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Movimiento reducido — desactiva animaciones/transiciones largas
+   ────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .marquee-track { animation: none !important; transform: none !important; }
+  .img-reveal { clip-path: none !important; }
+  .img-reveal > img,
+  .img-reveal > .img-reveal-media { transform: none !important; }
+  .product-card-sizes { opacity: 1; }
 }

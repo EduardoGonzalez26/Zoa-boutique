@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import TiendaClient from "@/components/TiendaClient";
 import { getGroupedProducts } from "@/lib/googleSheets";
 import type { Product } from "@/lib/types";
@@ -25,8 +26,8 @@ export default async function TiendaPage() {
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen pt-24 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[var(--color-stone-200)] border-t-[var(--color-gold)] rounded-full animate-spin" />
+      <div className="flex min-h-screen items-center justify-center pt-28">
+        <Loader2 size={20} aria-hidden className="animate-spin text-zoa-slate" />
       </div>
     }>
       <TiendaClient products={products} />

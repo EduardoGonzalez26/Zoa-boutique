@@ -4,17 +4,23 @@ import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, CreditCard, CheckCircle2 } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, CreditCard, CheckCircle2, Check, MapPin, Package, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import type { CartItem } from "@/lib/types";
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import Overline from "@/components/ui/Overline";
 
 // ── MercadoPagoWrapper loaded client-side only (prevents SSR hydration error) ───
 const MercadoPagoWrapper = dynamic(() => import('@/components/MercadoPagoWrapper'), { ssr: false });
 
+const FREE_SHIPPING_THRESHOLD = 3000;
+
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(n);
+
+/** Payload mínimo del Brick de Mercado Pago que viaja al API tal cual. */
+type BrickFormData = Record<string, unknown>;
 
 interface ShippingData {
   name: string; email: string; phone: string;
@@ -68,9 +74,9 @@ export default function CartDrawer() {
         setVipCode(code);
         setCouponDiscount(data.discount ?? 0, data.type ?? "");
         if (data.type === "interno") {
-          setCouponMsg("✓ Cupón VENDIDO activo — venta física");
+          setCouponMsg("Cupón VENDIDO activo — venta física");
         } else {
-          setCouponMsg(`✓ Cupón aplicado — ${data.discount}% de descuento`);
+          setCouponMsg(`Cupón aplicado — ${data.discount}% de descuento`);
         }
         setCouponStatus("ok");
       } else {
@@ -149,7 +155,11 @@ export default function CartDrawer() {
     setTimeout(() => { setDrawerView("cart"); setShowBrick(false); setFormError(null); setError(null); setAddressSelected(false); setShippingData(EMPTY_SHIPPING); }, 400);
   };
 
-  const InputCls = "w-full border border-[var(--color-stone-200)] rounded-md px-3 py-2.5 text-sm font-sans bg-transparent text-[var(--color-charcoal)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-gold)] transition-colors";
+  const InputCls = "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3 py-2.5 font-sans text-sm text-zoa-slate placeholder:text-zoa-slate-60 transition-colors focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
+
+  const itemCountTotal = items.reduce((sum, i) => sum + i.quantity, 0);
+  const freeShippingProgress = Math.min(100, Math.round((subtotalVal / FREE_SHIPPING_THRESHOLD) * 100));
+  const missingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotalVal);
 
   return (
     <AnimatePresence>
@@ -159,82 +169,98 @@ export default function CartDrawer() {
           <motion.div ref={overlayRef} key="backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 bg-[var(--color-charcoal)]/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-zoa-slate/40 backdrop-blur-sm"
             onClick={handleClose} />
 
-          {/* Drawer panel — bottom sheet on mobile (95svh), full-height on desktop */}
+          {/* Drawer — bottom sheet en móvil, altura completa en escritorio */}
           <motion.aside key="drawer"
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-            className="cart-drawer-aside fixed left-0 right-0 bottom-0 md:left-auto md:top-0 md:bottom-0 md:right-0 z-50 w-full md:max-w-md bg-[var(--color-cream)] shadow-2xl flex flex-col rounded-t-2xl md:rounded-t-none md:rounded-l-2xl"
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="cart-drawer-aside fixed left-0 right-0 bottom-0 md:left-auto md:top-0 md:bottom-0 md:right-0 z-50 w-full md:max-w-md bg-zoa-sand shadow-card flex flex-col border-t border-zoa-line md:border-t-0 md:border-l"
             style={{ maxHeight: "95svh" }}
           >
 
+            {/* Drag handle (móvil) */}
+            <div aria-hidden className="flex flex-none justify-center pt-3 md:hidden">
+              <span className="h-px w-12 bg-zoa-line-strong" />
+            </div>
+
             {/* ── Header ── */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--color-stone-100)] flex-shrink-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-none items-start justify-between border-b border-zoa-line px-6 py-5">
+              <div className="flex min-w-0 flex-col gap-1.5">
                 {drawerView === "checkout" ? (
                   <button onClick={() => { setDrawerView("cart"); setShowBrick(false); }}
-                    className="cursor-pointer flex items-center gap-1.5 text-[var(--color-stone-600)] hover:text-[var(--color-charcoal)] transition-colors">
-                    <ArrowLeft size={14} strokeWidth={1.5} />
-                    <span className="font-sans text-[10px] tracking-[0.2em] uppercase">Carrito</span>
+                    className="flex min-h-11 cursor-pointer items-center gap-2 text-zoa-slate-60 transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+                    <ArrowLeft size={14} strokeWidth={1.4} aria-hidden />
+                    <span className="font-sans text-[10px] uppercase tracking-[0.18em]">Volver a la bolsa</span>
                   </button>
                 ) : (
-                  <>
-                    <ShoppingBag size={18} strokeWidth={1.5} className="text-[var(--color-charcoal)]" />
-                    <h2 className="font-serif text-xl text-[var(--color-charcoal)]">Tu carrito</h2>
-                  </>
+                  <Overline>
+                    Tu bolsa{itemCountTotal > 0 ? ` · ${itemCountTotal} ${itemCountTotal === 1 ? "pieza" : "piezas"}` : ""}
+                  </Overline>
                 )}
+                <h2 className="font-display text-2xl leading-none tracking-[-0.02em] text-zoa-slate">
+                  {drawerView === "checkout" ? "Datos de envío" : "Tu selección"}
+                </h2>
               </div>
               <button onClick={handleClose} aria-label="Cerrar carrito"
-                className="cursor-pointer p-2 rounded-lg text-[var(--color-stone-400)] hover:text-[var(--color-charcoal)] transition-colors">
-                <X size={20} strokeWidth={1.5} />
+                className="flex h-11 w-11 flex-none cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+                <X size={20} strokeWidth={1.4} />
               </button>
             </div>
 
             {/* ═══════════════ CART VIEW ═══════════════ */}
             {drawerView === "cart" && (
               <>
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
+                <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
                   <AnimatePresence initial={false}>
                     {items.length === 0 ? (
                       <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="flex flex-col items-center justify-center h-48 gap-3 text-[var(--color-stone-400)]">
-                        <ShoppingBag size={36} strokeWidth={1} />
-                        <p className="font-sans text-sm tracking-wide">Tu carrito está vacío</p>
+                        className="flex h-56 flex-col items-center justify-center gap-4 text-zoa-slate-60">
+                        <ShoppingBag size={32} strokeWidth={1} aria-hidden />
+                        <p className="font-display text-xl italic text-zoa-slate">Tu bolsa está vacía</p>
+                        <button
+                          onClick={handleClose}
+                          className="link-underline cursor-pointer font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
+                        >
+                          Explorar la tienda
+                        </button>
                       </motion.div>
                     ) : (
                       items.map((item: CartItem) => (
                         <motion.div key={`${item.product.id}-${item.size}`}
                           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
                           transition={{ duration: 0.25 }}
-                          className="flex gap-4 pb-5 border-b border-[var(--color-stone-100)] last:border-0">
-                          {/* Thumbnail */}
-                          <div className="relative w-20 h-28 flex-shrink-0 bg-[var(--color-stone-100)] overflow-hidden rounded-lg">
+                          className="flex gap-4 border-b border-zoa-line pb-5 last:border-0">
+                          {/* Miniatura 4/5 — placeholder #FFF7F5 */}
+                          <div className="relative aspect-[4/5] w-20 flex-shrink-0 overflow-hidden bg-zoa-surface">
                             {item.product.images[0] && (
                               <Image src={item.product.images[0]} alt={item.product.name} fill className="object-cover" sizes="80px" />
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-serif text-sm text-[var(--color-charcoal)] leading-snug">{item.product.name}</h3>
-                            <p className="text-[11px] text-[var(--color-stone-400)] font-sans tracking-[0.15em] uppercase mt-0.5">Talla {item.size}</p>
-                            <p className="font-sans text-sm text-[var(--color-stone-600)] mt-1">{fmt(item.product.price)}</p>
-                            {/* Quantity controls */}
-                            <div className="flex items-center gap-3 mt-3">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-sans text-sm font-normal leading-snug text-zoa-slate">{item.product.name}</h3>
+                            <p className="mt-1 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate-60">
+                              Talla {item.size}
+                            </p>
+                            <p className="mt-1.5 font-sans text-sm text-zoa-slate tabular">{fmt(item.product.price)}</p>
+
+                            {/* Steppers hairline 44px */}
+                            <div className="mt-3 flex items-center gap-2">
                               <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
-                                className="cursor-pointer w-7 h-7 flex items-center justify-center border border-[var(--color-stone-200)] rounded-md text-[var(--color-charcoal)] hover:border-[var(--color-charcoal)] transition-colors" aria-label="Reducir">
-                                <Minus size={12} />
+                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label="Reducir cantidad">
+                                <Minus size={12} aria-hidden />
                               </button>
-                              <span className="font-sans text-sm w-4 text-center">{item.quantity}</span>
+                              <span className="w-6 text-center font-sans text-sm text-zoa-slate tabular">{item.quantity}</span>
                               <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
-                                className="cursor-pointer w-7 h-7 flex items-center justify-center border border-[var(--color-stone-200)] rounded-md text-[var(--color-charcoal)] hover:border-[var(--color-charcoal)] transition-colors" aria-label="Aumentar">
-                                <Plus size={12} />
+                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label="Aumentar cantidad">
+                                <Plus size={12} aria-hidden />
                               </button>
                               <button onClick={() => removeItem(item.product.id, item.size)}
-                                className="cursor-pointer ml-auto p-1.5 rounded-md text-[var(--color-stone-400)] hover:text-red-500 transition-colors" aria-label="Eliminar">
-                                <Trash2 size={14} strokeWidth={1.5} />
+                                className="ml-auto flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine" aria-label="Eliminar pieza">
+                                <Trash2 size={14} strokeWidth={1.4} aria-hidden />
                               </button>
                             </div>
                           </div>
@@ -245,23 +271,47 @@ export default function CartDrawer() {
                 </div>
 
                 {items.length > 0 && (
-                  <div className="border-t border-[var(--color-stone-100)] px-6 py-5 space-y-4 flex-shrink-0">
-                    {/* Promo / VIP code */}
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-1.5 text-[10px] font-sans tracking-[0.2em] uppercase text-[var(--color-stone-600)]">
-                        <Tag size={12} /> Código promo
+                  <div className="flex-none space-y-5 border-t border-zoa-line px-6 py-5">
+
+                    {/* ── Progreso de envío gratis (1px forest) ── */}
+                    <div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate-60">
+                          {missingForFreeShipping > 0 ? "Envío gratis" : "Envío gratis desbloqueado"}
+                        </p>
+                        <p className="font-sans text-[10px] tracking-[0.14em] text-zoa-slate tabular">
+                          {fmt(subtotalVal)} / {fmt(FREE_SHIPPING_THRESHOLD)}
+                        </p>
+                      </div>
+                      <div className="mt-2 h-px w-full bg-zoa-line" role="presentation">
+                        <span
+                          className="block h-px bg-zoa-forest transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                          style={{ width: `${freeShippingProgress}%` }}
+                        />
+                      </div>
+                      <p className="mt-2 font-display text-[13px] italic text-zoa-wine">
+                        {missingForFreeShipping > 0
+                          ? `Te faltan ${fmt(missingForFreeShipping)}`
+                          : "Tu envío corre por nuestra cuenta"}
+                      </p>
+                    </div>
+
+                    {/* ── Cupón editorial ── */}
+                    <div className="space-y-2 border-t border-zoa-line pt-5">
+                      <label className="flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.2em] text-zoa-slate-60">
+                        <Tag size={12} aria-hidden /> Código promo
                       </label>
 
-                      {/* Active coupon chip */}
                       {vipCode && couponDiscount >= 0 && couponStatus === "ok" ? (
-                        <div className="flex items-center justify-between px-3 py-2 rounded-md bg-emerald-50 border border-emerald-200">
-                          <span className="text-[11px] font-sans text-emerald-700 font-medium">
-                            ✓ {vipCode}{couponDiscount > 0 ? ` — ${couponDiscount}% off` : " — venta física"}
+                        <div className="flex items-center justify-between border border-zoa-success px-3 py-2">
+                          <span className="inline-flex items-center gap-2 font-sans text-[11px] font-medium text-zoa-success">
+                            <Check size={12} aria-hidden />
+                            {vipCode}{couponDiscount > 0 ? ` — ${couponDiscount}% off` : " — venta física"}
                           </span>
                           <button onClick={handleRemoveCoupon}
-                            className="ml-3 text-emerald-500 hover:text-red-500 transition-colors text-xs leading-none cursor-pointer"
+                            className="ml-3 cursor-pointer text-zoa-success transition-colors hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine"
                             aria-label="Quitar cupón">
-                            ✕
+                            <X size={13} aria-hidden />
                           </button>
                         </div>
                       ) : (
@@ -270,84 +320,84 @@ export default function CartDrawer() {
                             onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setCouponStatus("idle"); setCouponMsg(null); }}
                             onKeyDown={(e) => e.key === "Enter" && handleApplyCode()}
                             placeholder="Aplicar un cupón"
-                            className="flex-1 border border-[var(--color-stone-200)] rounded-md px-3 py-2 text-xs font-sans tracking-widest bg-transparent text-[var(--color-charcoal)] placeholder:text-[var(--color-stone-400)] focus:outline-none focus:border-[var(--color-gold)] transition-colors" />
+                            aria-label="Código promocional"
+                            className="min-h-11 flex-1 border border-zoa-line-strong bg-transparent px-3 font-sans text-xs tracking-widest text-zoa-slate transition-colors placeholder:text-zoa-slate-60 focus:border-zoa-slate focus:outline-none focus:ring-2 focus:ring-zoa-slate/15" />
                           <button onClick={handleApplyCode} disabled={couponStatus === "loading"}
-                            className="cursor-pointer px-4 py-2 rounded-md bg-[var(--color-charcoal)] text-[var(--color-cream)] text-[10px] font-sans tracking-[0.15em] uppercase hover:bg-[var(--color-gold)] transition-colors duration-300 disabled:opacity-60">
-                            {couponStatus === "loading" ? "..." : "Aplicar"}
+                            className="min-h-11 cursor-pointer border border-zoa-line-strong px-4 font-sans text-[10px] uppercase tracking-[0.15em] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+                            {couponStatus === "loading" ? "…" : "Aplicar"}
                           </button>
                         </div>
                       )}
-                      {couponMsg && couponStatus === "error" && (
-                        <p className="text-[11px] font-sans text-red-500">{couponMsg}</p>
-                      )}
-                    </div>
-
-
-                    {/* Price summary */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex justify-between text-xs font-sans text-[var(--color-stone-600)]">
-                        <span>Subtotal</span><span>{fmt(subtotalVal)}</span>
-                      </div>
-                      {discountVal > 0 && (
-                        <div className="flex justify-between text-xs font-sans text-emerald-600">
-                          <span>Descuento ({couponDiscount}%)</span>
-                          <span>- {fmt(discountVal)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-xs font-sans text-[var(--color-stone-600)]">
-                        <span>Envío estándar</span>
-                        <span className={shippingVal === 0 ? "text-green-600" : ""}>
-                          {shippingVal === 0 ? "Gratis 🎉" : fmt(shippingVal)}
-                        </span>
-                      </div>
-                      {subtotalVal < 3000 && (
-                        <p className="text-[10px] text-[var(--color-stone-400)] font-sans">
-                          Agrega {fmt(3000 - subtotalVal)} más para envío gratis
+                      {couponMsg && (
+                        <p className={`font-sans text-[11px] ${couponStatus === "error" ? "text-zoa-wine" : "text-zoa-success"}`}>
+                          {couponMsg}
                         </p>
                       )}
-                      <div className="flex justify-between pt-2 border-t border-[var(--color-stone-100)]">
-                        <span className="font-serif text-base text-[var(--color-charcoal)]">Total</span>
-                        <span className="font-serif text-base text-[var(--color-charcoal)]">{fmt(finalTotal)}</span>
+                    </div>
+
+                    {/* ── Resumen tabular ── */}
+                    <div className="space-y-2 border-t border-zoa-line pt-5">
+                      <div className="flex justify-between font-sans text-xs text-zoa-slate-60">
+                        <span>Subtotal</span><span className="tabular">{fmt(subtotalVal)}</span>
+                      </div>
+                      {discountVal > 0 && (
+                        <div className="flex justify-between font-sans text-xs text-zoa-success">
+                          <span>Descuento ({couponDiscount}%)</span>
+                          <span className="tabular">- {fmt(discountVal)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-sans text-xs text-zoa-slate-60">
+                        <span>Envío estándar</span>
+                        <span className={shippingVal === 0 ? "text-zoa-success" : "tabular"}>
+                          {shippingVal === 0 ? "Gratis" : fmt(shippingVal)}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline justify-between border-t border-zoa-line pt-3">
+                        <span className="font-sans text-base font-medium text-zoa-slate">Total</span>
+                        <span className="font-sans text-base font-medium text-zoa-slate tabular">{fmt(finalTotal)}</span>
                       </div>
                     </div>
 
-
-                    {/* VENDIDO: special physical sale confirm */}
+                    {/* VENDIDO: venta física */}
                     {isVendido ? (
                       <>
                         {vendidoSuccess ? (
-                          <div className="w-full py-3.5 rounded-xl bg-emerald-500 text-white text-center font-sans text-sm tracking-wide">
-                            ✅ Venta registrada — inventario descontado
+                          <div className="inline-flex w-full items-center justify-center gap-2 border border-zoa-success py-3.5 text-center font-sans text-sm tracking-wide text-zoa-success">
+                            <CheckCircle2 size={16} aria-hidden /> Venta registrada — inventario descontado
                           </div>
                         ) : (
                           <motion.button
                             onClick={handleVendido}
                             disabled={vendidoLoading}
-                            whileTap={{ scale: 0.98 }}
-                            className="cursor-pointer w-full py-3.5 rounded-xl bg-emerald-600 text-white font-sans text-xs tracking-[0.25em] uppercase hover:bg-emerald-700 transition-colors duration-300 disabled:opacity-60"
-                          >
-                            {vendidoLoading ? "Registrando..." : "✅ Confirmar Venta Física"}
+                            whileTap={{ scale: 0.99 }}
+                            className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                            {vendidoLoading ? "Registrando…" : "Confirmar venta física"}
                           </motion.button>
                         )}
-                        <p className="text-[10px] text-center font-sans text-[var(--color-stone-400)] tracking-wide">
+                        <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
                           Solo descuenta inventario · Sin cobro
                         </p>
                       </>
                     ) : (
-                      /* Normal checkout → go to payment */
+                      /* Checkout normal */
                       <>
                         <motion.button
                           onClick={() => setDrawerView("checkout")}
-                          whileTap={{ scale: 0.98 }}
-                          className="cursor-pointer w-full py-3.5 rounded-xl bg-[var(--color-charcoal)] text-[var(--color-cream)] font-sans text-xs tracking-[0.25em] uppercase hover:bg-[var(--color-gold)] transition-colors duration-300">
-                          Ir a pagar →
+                          whileTap={{ scale: 0.99 }}
+                          className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                          Finalizar compra
                         </motion.button>
-                        <p className="text-[10px] text-center font-sans text-[var(--color-stone-400)] tracking-wide">
-                          Pago seguro con MercadoPago
+                        <button
+                          onClick={handleClose}
+                          className="flex h-12 w-full cursor-pointer items-center justify-center border border-zoa-line-strong font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                          Seguir comprando
+                        </button>
+                        <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
+                          Pago seguro con Mercado Pago
                         </p>
                       </>
                     )}
-                    {error && <p className="text-xs text-red-500 text-center">{error}</p>}
+                    {error && <p className="text-center font-sans text-xs text-zoa-wine">{error}</p>}
                   </div>
                 )}
               </>
@@ -356,38 +406,35 @@ export default function CartDrawer() {
             {/* ═══════════════ CHECKOUT VIEW ═══════════════ */}
             {drawerView === "checkout" && (
               <div className="flex-1 overflow-y-auto">
-                <div className="px-6 py-5 space-y-5">
-                  <p className="font-serif text-xl text-[var(--color-charcoal)]">Datos de envío</p>
-
-                  {/* Delivery time badge */}
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200">
-                    <span className="text-emerald-600 text-sm">📦</span>
-                    <p className="text-[11px] font-sans text-emerald-700 tracking-wide">
-                      Entrega estimada: <strong>3–5 días hábiles</strong>
+                <div className="space-y-5 px-6 py-5">
+                  {/* Entrega estimada */}
+                  <div className="inline-flex items-center gap-2 border border-zoa-line px-3 py-2">
+                    <Package size={14} strokeWidth={1.4} aria-hidden className="text-zoa-slate-60" />
+                    <p className="font-sans text-[11px] tracking-wide text-zoa-slate-60">
+                      Entrega estimada: <strong className="font-medium text-zoa-slate">3–5 días hábiles</strong>
                     </p>
                   </div>
 
-                  {/* Order mini-summary */}
-                  <div className="bg-[var(--color-stone-100)] rounded-lg px-4 py-3 space-y-1">
+                  {/* Mini resumen */}
+                  <div className="space-y-2 border border-zoa-line px-4 py-3">
                     {items.map((item) => (
-                      <div key={`${item.product.id}-${item.size}`} className="flex justify-between text-xs font-sans text-[var(--color-stone-600)]">
-                        <span>{item.product.name} · Talla {item.size} × {item.quantity}</span>
-                        <span>{fmt(item.product.price * item.quantity)}</span>
+                      <div key={`${item.product.id}-${item.size}`} className="flex justify-between gap-3 font-sans text-xs text-zoa-slate-60">
+                        <span className="min-w-0 truncate">{item.product.name} · Talla {item.size} × {item.quantity}</span>
+                        <span className="shrink-0 tabular">{fmt(item.product.price * item.quantity)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between pt-2 border-t border-[var(--color-stone-200)] font-sans text-xs text-[var(--color-charcoal)] font-medium">
-                      <span>Total</span><span>{fmt(finalTotal)}</span>
+                    <div className="flex justify-between border-t border-zoa-line pt-2 font-sans text-xs font-medium text-zoa-slate">
+                      <span>Total</span><span className="tabular">{fmt(finalTotal)}</span>
                     </div>
                   </div>
 
-                  {/* Show MP Checkout Brick once form is validated */}
+                  {/* MP Brick una vez validado el formulario */}
                   {showBrick ? (
-                    /* key estable basado en total para evitar duplicados */
                     <div key={`mp-brick-${finalTotal}`} style={{ touchAction: 'manipulation', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-                      {error && <p className="text-xs text-red-500 font-sans mb-3">{error}</p>}
+                      {error && <p className="mb-3 font-sans text-xs text-zoa-wine">{error}</p>}
                       {paying && (
-                        <div className="flex items-center justify-center gap-2 py-4 text-xs font-sans text-[var(--color-stone-400)]">
-                          <div className="w-4 h-4 border-2 border-[var(--color-gold)] border-t-transparent rounded-full animate-spin" />
+                        <div className="flex items-center justify-center gap-2 py-4 font-sans text-xs text-zoa-slate-60">
+                          <Loader2 size={16} aria-hidden className="animate-spin text-zoa-slate" />
                           Procesando pago...
                         </div>
                       )}
@@ -401,7 +448,7 @@ export default function CartDrawer() {
                             name: shippingData.name,
                           },
                         }}
-                        onSubmit={async ({ formData }: any) => {
+                        onSubmit={async ({ formData }: { formData: BrickFormData }) => {
                           if (paying) return;
                           setPaying(true);
                           setError(null);
@@ -446,8 +493,8 @@ export default function CartDrawer() {
                               // Rejected or unknown — show error, keep brick visible so user can retry
                               throw new Error(data.error ?? `Pago no aprobado (${status}). Intenta de nuevo.`);
                             }
-                          } catch (err: any) {
-                            setError(err.message ?? "Error inesperado");
+                          } catch (err: unknown) {
+                            setError(err instanceof Error ? err.message : "Error inesperado");
                             setPaying(false);
                           }
                         }}
@@ -455,24 +502,27 @@ export default function CartDrawer() {
                     </div>
                   ) : (
                     <>
-                      {/* Shipping form */}
+                      {/* Formulario de envío */}
                       <div className="space-y-3">
                         <input type="text" placeholder="Nombre completo"
+                          aria-label="Nombre completo"
                           value={shippingData.name}
                           onChange={(e) => setShippingData((d) => ({ ...d, name: e.target.value }))}
                           className={InputCls} />
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="relative">
-                            <Mail size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none" />
+                            <Mail size={13} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zoa-slate-60" />
                             <input type="email" placeholder="Correo electrónico"
+                              aria-label="Correo electrónico"
                               value={shippingData.email}
                               onChange={(e) => setShippingData((d) => ({ ...d, email: e.target.value }))}
                               className={`${InputCls} pl-8`} />
                           </div>
                           <div className="relative">
-                            <Phone size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none" />
+                            <Phone size={13} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zoa-slate-60" />
                             <input type="tel" placeholder="Teléfono"
+                              aria-label="Teléfono"
                               value={shippingData.phone}
                               onChange={(e) => setShippingData((d) => ({ ...d, phone: e.target.value }))}
                               className={`${InputCls} pl-8`} />
@@ -498,65 +548,63 @@ export default function CartDrawer() {
                               }));
                               setAddressSelected(true);
                             }}
-                            className={`${InputCls} ${addressSelected ? "border-green-500 pr-10" : ""}`}
+                            className={`${InputCls} ${addressSelected ? "border-zoa-success pr-10" : ""}`}
                             placeholder="Calle, número y colonia — ej: Insurgentes 123, Roma"
                           />
                           {addressSelected && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                              <CheckCircle2 size={15} className="text-green-500" />
+                            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                              <CheckCircle2 size={15} aria-hidden className="text-zoa-success" />
                             </div>
                           )}
                         </div>
 
                         {/* Ciudad/Estado auto-poblados */}
                         {addressSelected && (shippingData.city || shippingData.state) && (
-                          <p className="text-[11px] font-sans text-[var(--color-stone-500)] px-1">
-                            📍 {[shippingData.city, shippingData.state, shippingData.zip].filter(Boolean).join(", ")}
+                          <p className="inline-flex items-center gap-2 px-1 font-sans text-[11px] text-zoa-slate-60">
+                            <MapPin size={12} aria-hidden />
+                            {[shippingData.city, shippingData.state, shippingData.zip].filter(Boolean).join(", ")}
                           </p>
                         )}
 
-                        {/* Número Exterior + Interior */}
+                        {/* Núm. Exterior / Interior */}
                         <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <input type="text" placeholder="Núm. Exterior *"
-                              value={shippingData.numExterior}
-                              onChange={(e) => setShippingData((d) => ({ ...d, numExterior: e.target.value }))}
-                              className={InputCls} />
-                          </div>
+                          <input type="text" placeholder="Núm. Exterior *"
+                            aria-label="Número exterior"
+                            value={shippingData.numExterior}
+                            onChange={(e) => setShippingData((d) => ({ ...d, numExterior: e.target.value }))}
+                            className={InputCls} />
                           <input type="text" placeholder="Interior / Depto. (opcional)"
+                            aria-label="Número interior"
                             value={shippingData.interior}
                             onChange={(e) => setShippingData((d) => ({ ...d, interior: e.target.value }))}
                             className={InputCls} />
                         </div>
                         <input type="text" placeholder="Referencias (entre calles, color de fachada...)"
+                          aria-label="Referencias de entrega"
                           value={shippingData.referencias}
                           onChange={(e) => setShippingData((d) => ({ ...d, referencias: e.target.value }))}
                           className={InputCls} />
                       </div>
 
-                      {formError && (
-                        <p className="text-xs text-red-500 font-sans">{formError}</p>
-                      )}
+                      {formError && <p className="font-sans text-xs text-zoa-wine">{formError}</p>}
 
-                      <div className="flex items-start gap-2 text-xs font-sans text-[var(--color-stone-600)] bg-[var(--color-stone-100)] rounded-lg px-4 py-3">
-                        <CreditCard size={14} className="mt-0.5 shrink-0 text-[var(--color-stone-400)]" />
-                        <span>El pago se procesará de forma segura a través de <strong>Mercado Pago</strong>. Aceptamos tarjetas, OXXO y transferencias.</span>
+                      <div className="flex items-start gap-2 border border-zoa-line px-4 py-3 font-sans text-xs text-zoa-slate-60">
+                        <CreditCard size={14} strokeWidth={1.4} aria-hidden className="mt-0.5 shrink-0 text-zoa-slate-60" />
+                        <span>El pago se procesará de forma segura a través de <strong className="font-medium text-zoa-slate">Mercado Pago</strong>. Aceptamos tarjetas, OXXO y transferencias.</span>
                       </div>
 
-                      {error && <p className="text-xs text-red-500 font-sans">{error}</p>}
+                      {error && <p className="font-sans text-xs text-zoa-wine">{error}</p>}
 
                       <motion.button
                         onClick={handleGoToPayment}
-                        whileTap={{ scale: 0.98 }}
-                        className="cursor-pointer w-full py-3.5 rounded-xl bg-[var(--color-charcoal)] text-[var(--color-cream)] font-sans text-xs tracking-[0.25em] uppercase hover:bg-[var(--color-gold)] transition-colors duration-300">
-                        Confirmar y pagar →
+                        whileTap={{ scale: 0.99 }}
+                        className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                        Confirmar y pagar
                       </motion.button>
 
-                      <p className="text-[10px] text-center font-sans text-[var(--color-stone-400)] tracking-wide">
+                      <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
                         Pago seguro · Certificado SSL
                       </p>
-                      {/* Espacio reservado para logo MercadoPago — subir imagen después */}
-                      <div className="flex justify-center mt-1 h-8" aria-label="Logo MercadoPago" />
                     </>
                   )}
                 </div>

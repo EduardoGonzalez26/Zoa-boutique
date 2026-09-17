@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { CartItem } from "@/lib/types";
 
 interface MercadoPagoBrickProps {
@@ -56,9 +57,9 @@ export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: 
   // ── SDK loading ───────────────────────────────────────────────────────────
   if (!mpModule) {
     return (
-      <div className="flex items-center justify-center py-10 gap-3">
-        <div className="w-5 h-5 border-2 border-[var(--color-charcoal)] border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-sans text-[var(--color-stone-400)]">Cargando pasarela de pago…</span>
+      <div className="flex items-center justify-center gap-3 py-10">
+        <Loader2 size={18} aria-hidden className="animate-spin text-zoa-slate" />
+        <span className="font-sans text-xs text-zoa-slate-60">Cargando pasarela de pago…</span>
       </div>
     );
   }
@@ -68,7 +69,7 @@ export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: 
   return (
     <div className="space-y-3">
       {paymentError && (
-        <p className="text-xs text-red-500 font-sans text-center">{paymentError}</p>
+        <p className="text-center font-sans text-xs text-zoa-wine">{paymentError}</p>
       )}
 
       {/* 
@@ -89,7 +90,7 @@ export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: 
             style: {
               customVariables: {
                 theme: "default",
-                textPrimaryColor: "var(--color-charcoal)",
+                textPrimaryColor: "#2B3C42",
               },
             },
           },

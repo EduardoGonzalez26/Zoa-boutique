@@ -1,87 +1,66 @@
 "use client";
 
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import Overline from "@/components/ui/Overline";
+import Button from "@/components/ui/Button";
 
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+/**
+ * Banda global slate full-bleed con tinta off-white.
+ * Aparece al pie de todas las páginas: cierre editorial antes del footer.
+ */
 export default function CTABanner() {
+  const reduceMotion = useReducedMotion();
+
+  const reveal = {
+    initial: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: "-80px" as const },
+  };
+
   return (
-    <section
-      style={{ background: "linear-gradient(135deg, #EFEBE4 0%, #E8E0D5 50%, #DDD5C8 100%)" }}
-      className="relative overflow-hidden"
-    >
-      {/* Subtle texture overlay */}
-      <div
-        className="absolute inset-0 opacity-[0.035] pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}
-      />
+    <section className="bg-zoa-slate text-zoa-surface">
+      <div className="container-zoa py-[var(--space-section)]">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end md:gap-14">
 
-      {/* Decorative lines */}
-      <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[var(--color-gold)]/20 to-transparent" />
-      <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-[var(--color-gold)]/20 to-transparent" />
+          {/* Bloque editorial izquierdo */}
+          <div className="md:col-span-7">
+            <motion.div {...reveal} transition={{ duration: 0.7, ease: EASE }}>
+              <Overline tone="inverse">Nueva colección disponible</Overline>
+            </motion.div>
+            <motion.h2
+              {...reveal}
+              transition={{ duration: 0.7, delay: 0.07, ease: EASE }}
+              className="mt-6 text-balance font-display text-[clamp(2.25rem,5.5vw,4.75rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-surface"
+            >
+              Piezas que te definen,
+              <br className="hidden md:block" />{" "}
+              <span className="text-zoa-slate-inverse-60">estilo que perdura</span>
+            </motion.h2>
+          </div>
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 py-20 md:py-28 text-center">
-        {/* Label */}
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="font-sans text-[10px] tracking-[0.4em] uppercase text-[var(--color-stone-600)] mb-5"
-        >
-          Nueva colección disponible
-        </motion.p>
+          {/* Columna derecha */}
+          <div className="md:col-span-5 md:pb-2 md:pl-6 lg:pl-10">
+            <motion.p
+              {...reveal}
+              transition={{ duration: 0.7, delay: 0.14, ease: EASE }}
+              className="max-w-md font-sans text-[clamp(1rem,1.35vw,1.3rem)] leading-[1.6] text-zoa-slate-inverse-60"
+            >
+              Descubre nuestra colección completa: blusas, vestidos, sweaters y más. Envíos a todo México.
+            </motion.p>
 
-        {/* Headline */}
-        <motion.h2
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          viewport={{ once: true }}
-          className="font-serif text-4xl md:text-5xl lg:text-6xl text-[var(--color-charcoal)] leading-tight mb-5"
-          style={{ fontFamily: "var(--font-marcellus), Georgia, serif", fontWeight: 400 }}
-        >
-          Piezas que te definen,<br className="hidden md:block" />
-          <span className="italic text-[var(--color-stone-600)]"> estilo que perdura</span>
-        </motion.h2>
-
-        {/* Divider */}
-        <motion.div
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-          viewport={{ once: true }}
-          className="w-12 h-px bg-[var(--color-gold)] mx-auto mb-6"
-        />
-
-        {/* Subtext */}
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          viewport={{ once: true }}
-          className="font-sans text-sm text-[var(--color-stone-600)] max-w-md mx-auto mb-10 leading-relaxed tracking-wide"
-        >
-          Descubre nuestra colección completa: blusas, vestidos, sweaters y más. Envíos a todo México.
-        </motion.p>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          viewport={{ once: true }}
-        >
-          <Link
-            href="/tienda"
-            className="group inline-flex items-center gap-2.5 bg-[var(--color-charcoal)] text-[var(--color-cream)] px-8 py-3.5 rounded-lg font-sans text-[11px] tracking-[0.25em] uppercase hover:bg-[var(--color-stone-700)] transition-colors duration-300"
-          >
-            Explorar colección
-            <ArrowRight size={14} className="transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
-        </motion.div>
+            <motion.div
+              {...reveal}
+              transition={{ duration: 0.7, delay: 0.21, ease: EASE }}
+              className="mt-9"
+            >
+              <Button href="/tienda" variant="inverse" size="lg">
+                Explorar colección
+              </Button>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

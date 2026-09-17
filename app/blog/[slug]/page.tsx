@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { BLOG_ARTICLES, getArticleBySlug } from "@/lib/blog";
+import BlogCard from "@/components/BlogCard";
+import ReadingProgress from "@/components/ReadingProgress";
+import Overline from "@/components/ui/Overline";
+import Button from "@/components/ui/Button";
 
 // Generate static pages at build time
 export async function generateStaticParams() {
@@ -38,131 +44,137 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
   if (!article) notFound();
 
   const relatedArticles = BLOG_ARTICLES.filter((a) => a.slug !== slug).slice(0, 2);
+  const dateLabel = new Date(article.date).toLocaleDateString("es-MX", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 
   return (
-    <main style={{ background: "#FAF8F5", minHeight: "100vh", paddingTop: "80px" }}>
-      {/* Hero image */}
-      <div style={{ height: "clamp(240px, 40vw, 440px)", overflow: "hidden", position: "relative" }}>
-        <img
+    <main className="min-h-screen bg-zoa-sand pt-24 md:pt-28">
+      {/* ── Imagen de portada a sangre ── */}
+      <div className="relative h-[clamp(260px,42vw,520px)] w-full overflow-hidden bg-zoa-surface">
+        <Image
           src={article.coverImage}
           alt={article.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
         />
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.55))" }} />
       </div>
 
-      {/* Article content */}
-      <div style={{ maxWidth: "740px", margin: "0 auto", padding: "0 24px 80px" }}>
-        {/* Breadcrumb */}
-        <nav style={{ display: "flex", gap: "8px", alignItems: "center", padding: "24px 0 32px", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#A89F95", fontFamily: "sans-serif" }}>
-          <Link href="/" style={{ color: "#A89F95", textDecoration: "none" }}>Inicio</Link>
-          <span>·</span>
-          <Link href="/blog" style={{ color: "#A89F95", textDecoration: "none" }}>Blog</Link>
-          <span>·</span>
-          <span style={{ color: "#6E655C" }}>{article.category}</span>
+      <div className="container-zoa">
+        {/* Breadcrumb hairline */}
+        <nav
+          aria-label="Breadcrumb"
+          className="hairline-b flex flex-wrap items-center gap-2 py-5 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate-60"
+        >
+          <Link href="/" className="link-underline cursor-pointer transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+            Inicio
+          </Link>
+          <span aria-hidden>/</span>
+          <Link href="/blog" className="link-underline cursor-pointer transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+            Blog
+          </Link>
+          <span aria-hidden>/</span>
+          <span className="text-zoa-slate">{article.category}</span>
         </nav>
 
-        {/* Title block */}
-        <header style={{ marginBottom: "36px" }}>
-          <span style={{
-            display: "inline-block", marginBottom: "16px",
-            fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase",
-            padding: "4px 12px", background: "#C9A96E", color: "#FAF8F5", fontFamily: "sans-serif",
-          }}>
-            {article.category}
-          </span>
-
-          <h1 style={{
-            margin: "0 0 16px", fontFamily: "Georgia, serif",
-            fontSize: "clamp(24px, 4vw, 38px)", fontWeight: 400,
-            color: "#1C1917", lineHeight: 1.3, letterSpacing: "0.02em",
-          }}>
+        {/* ── Cabecera del artículo ── */}
+        <header className="pb-10 pt-12 md:pt-16">
+          <Overline>{article.category}</Overline>
+          <h1 className="mt-6 max-w-4xl text-balance font-display text-[clamp(2.25rem,5.5vw,4.75rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             {article.title}
           </h1>
-
-          <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap", fontSize: "12px", color: "#A89F95", fontFamily: "sans-serif" }}>
-            <span>{new Date(article.date).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" })}</span>
-            <span>·</span>
-            <span>Lectura: {article.readTime}</span>
-            <span>·</span>
-            <span style={{ color: "#8B6E4E", fontStyle: "italic" }}>Por {article.author}</span>
-          </div>
         </header>
 
-        {/* Lead / excerpt */}
-        <p style={{
-          margin: "0 0 36px", fontSize: "17px", color: "#6E655C",
-          lineHeight: 1.8, fontFamily: "Georgia, serif", fontStyle: "italic",
-          borderLeft: "3px solid #C9A96E", paddingLeft: "20px",
-        }}>
-          {article.excerpt}
-        </p>
+        {/* ── Cuerpo de lectura con raíl de metadatos ── */}
+        <div className="flex gap-12 pb-16 md:pb-24">
+          <aside className="hidden w-44 shrink-0 lg:block">
+            <div className="hairline-l sticky top-32 space-y-6 pl-5">
+              <div>
+                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate-60">Publicado</p>
+                <p className="mt-1.5 font-sans text-[12px] text-zoa-slate tabular">{dateLabel}</p>
+              </div>
+              <div>
+                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate-60">Lectura</p>
+                <p className="mt-1.5 font-sans text-[12px] text-zoa-slate tabular">{article.readTime}</p>
+              </div>
+              <div>
+                <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate-60">Autoría</p>
+                <p className="mt-1.5 font-sans text-[12px] text-zoa-slate">{article.author}</p>
+              </div>
+              <div className="hairline-t pt-6">
+                <Button variant="link-arrow" href="/blog" className="pb-1">
+                  Volver al blog
+                </Button>
+              </div>
+            </div>
+          </aside>
 
-        {/* Article body */}
-        <div
-          style={{
-            fontSize: "15px", lineHeight: 1.9, color: "#3A3530", fontFamily: "sans-serif",
-          }}
-          dangerouslySetInnerHTML={{ __html: article.content
-            .replace(/<h2>/g, '<h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;color:#1C1917;margin:40px 0 16px;letter-spacing:0.03em;">')
-            .replace(/<h3>/g, '<h3 style="font-family:Georgia,serif;font-size:17px;font-weight:400;color:#1C1917;margin:28px 0 10px;">')
-            .replace(/<p>/g, '<p style="margin:0 0 20px;">')
-            .replace(/<ul>/g, '<ul style="margin:0 0 20px;padding-left:24px;">')
-            .replace(/<ol>/g, '<ol style="margin:0 0 20px;padding-left:24px;">')
-            .replace(/<li>/g, '<li style="margin-bottom:8px;">')
-            .replace(/<a /g, '<a style="color:#C9A96E;text-decoration:underline;" ')
-          }}
-        />
+          <div className="min-w-0 max-w-[68ch] flex-1">
+            {/* Lead / excerpt */}
+            <p className="hairline-b pb-8 font-display text-[clamp(1.25rem,1.9vw,1.55rem)] leading-[1.45] tracking-[-0.01em] text-zoa-slate">
+              {article.excerpt}
+            </p>
 
-        {/* Back to blog */}
-        <div style={{ marginTop: "56px", paddingTop: "32px", borderTop: "1px solid #EDE8E2" }}>
-          <Link href="/blog" style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase",
-            color: "#C9A96E", textDecoration: "none", fontFamily: "sans-serif",
-          }}>
-            ← Volver al Blog
-          </Link>
+            {/* Progreso de lectura + cuerpo */}
+            <ReadingProgress>
+              <div
+                className="pt-8 text-[16px] leading-[1.85] text-zoa-slate-60"
+                dangerouslySetInnerHTML={{ __html: article.content
+                  .replace(/<h2>/g, '<h2 class="mt-12 mb-4 font-display text-[clamp(1.5rem,2.6vw,2rem)] font-normal leading-[1.12] tracking-[-0.02em] text-zoa-slate">')
+                  .replace(/<h3>/g, '<h3 class="mt-9 mb-3 font-display text-[clamp(1.15rem,1.8vw,1.35rem)] font-normal leading-[1.2] tracking-[-0.01em] text-zoa-slate">')
+                  .replace(/<p>/g, '<p class="mb-5">')
+                  .replace(/<ul>/g, '<ul class="mb-6 list-disc space-y-2 pl-5 marker:text-zoa-slate-60">')
+                  .replace(/<ol>/g, '<ol class="mb-6 list-decimal space-y-2 pl-5 marker:text-zoa-slate-60">')
+                  .replace(/<li>/g, '<li class="leading-[1.75]">')
+                  .replace(/<blockquote>/g, '<blockquote class="my-8 border-l border-zoa-line-strong pl-5 font-display text-[1.15rem] italic leading-[1.6] text-zoa-slate">')
+                  .replace(/<strong>/g, '<strong class="font-medium text-zoa-slate">')
+                  .replace(/<em>/g, '<em class="font-medium not-italic text-zoa-slate">')
+                  .replace(/<a /g, '<a class="text-zoa-slate underline decoration-zoa-slate decoration-1 underline-offset-4 transition-opacity hover:opacity-60" ')
+                  .replace(/<hr \/>/g, '<hr class="my-10 border-zoa-line" />')
+                }}
+              />
+            </ReadingProgress>
+
+            {/* CTA final */}
+            <div className="hairline-t mt-16 pt-10">
+              <Overline>Colección 2026</Overline>
+              <h2 className="mt-5 text-balance font-display text-[clamp(1.75rem,3.4vw,2.9rem)] font-normal leading-[1.04] tracking-[-0.02em] text-zoa-slate">
+                Descubre la colección completa
+              </h2>
+              <div className="mt-8 flex flex-wrap items-center gap-6">
+                <Button href="/tienda" variant="primary">
+                  Ver la tienda
+                </Button>
+                <Link
+                  href="/blog"
+                  className="link-underline inline-flex cursor-pointer items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate lg:hidden"
+                >
+                  <ArrowLeft size={12} aria-hidden />
+                  Volver al blog
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Related articles */}
+      {/* ── Lecturas relacionadas ── */}
       {relatedArticles.length > 0 && (
-        <section style={{ borderTop: "1px solid #EDE8E2", background: "#FFFFFF", padding: "60px 24px" }}>
-          <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
-            <p style={{ margin: "0 0 32px", fontSize: "11px", letterSpacing: "0.3em", textTransform: "uppercase", color: "#A89F95", fontFamily: "sans-serif" }}>
-              También te puede interesar
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+        <section className="hairline-t">
+          <div className="container-zoa py-[var(--space-section)]">
+            <Overline>También te puede interesar</Overline>
+            <div className="mt-8 grid grid-cols-1 gap-x-6 gap-y-14 sm:grid-cols-2">
               {relatedArticles.map((rel) => (
-                <Link key={rel.slug} href={`/blog/${rel.slug}`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={{ border: "1px solid #EDE8E2", overflow: "hidden", background: "#FAF8F5" }}>
-                    <img src={rel.coverImage} alt={rel.title} style={{ width: "100%", height: "160px", objectFit: "cover", display: "block" }} />
-                    <div style={{ padding: "20px" }}>
-                      <p style={{ margin: "0 0 8px", fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#A89F95", fontFamily: "sans-serif" }}>{rel.category}</p>
-                      <h3 style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: "16px", fontWeight: 400, color: "#1C1917", lineHeight: 1.4 }}>{rel.title}</h3>
-                    </div>
-                  </div>
-                </Link>
+                <BlogCard key={rel.slug} article={rel} />
               ))}
             </div>
           </div>
         </section>
       )}
-
-      {/* Shop CTA */}
-      <section style={{ background: "#1C1917", padding: "50px 24px", textAlign: "center" }}>
-        <h2 style={{ margin: "0 0 16px", fontFamily: "Georgia, serif", fontSize: "24px", fontWeight: 400, color: "#FAF8F5" }}>
-          Descubre nuestra colección
-        </h2>
-        <Link href="/tienda" style={{
-          display: "inline-block", background: "#C9A96E", color: "#FAF8F5",
-          padding: "12px 32px", fontSize: "11px", letterSpacing: "0.2em",
-          textTransform: "uppercase", textDecoration: "none", marginTop: "8px",
-        }}>
-          Ver tienda →
-        </Link>
-      </section>
 
       {/* JSON-LD structured data */}
       <script

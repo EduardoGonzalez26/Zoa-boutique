@@ -6,30 +6,27 @@ export const metadata: Metadata = { title: "Pago exitoso | Zoa" };
 
 export default function CheckoutSuccessPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 pt-16">
-      <div className="text-center max-w-md space-y-6">
-        <div className="flex justify-center">
-          <CheckCircle
-            size={56}
-            strokeWidth={1.2}
-            className="text-[var(--color-gold)]"
-          />
+    <div className="flex min-h-screen items-center justify-center px-5 pb-16 pt-28 md:pt-32">
+      <div className="w-full max-w-md">
+        <div className="hairline flex flex-col items-center gap-6 px-8 py-14 text-center">
+          <CheckCircle size={48} strokeWidth={1.1} aria-hidden className="text-zoa-success" />
+          <p className="overline">Pedido confirmado</p>
+          <h1 className="text-balance font-display text-[clamp(2rem,4.5vw,3.25rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
+            ¡Pago recibido!
+          </h1>
+          <p className="font-sans text-[15px] leading-[1.7] text-zoa-slate-60">
+            Gracias por tu compra en{" "}
+            <span className="font-display text-zoa-slate">Zoa</span>.
+            Recibirás un correo con los detalles de tu pedido y tu guía de envío en
+            breve.
+          </p>
+          <Link
+            href="/"
+            className="mt-2 inline-flex h-12 cursor-pointer items-center justify-center gap-2.5 bg-zoa-forest px-8 font-sans text-[11px] font-medium uppercase tracking-[0.18em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
+          >
+            Seguir comprando
+          </Link>
         </div>
-        <h1 className="font-serif text-4xl text-[var(--color-charcoal)]">
-          ¡Pago recibido!
-        </h1>
-        <p className="font-sans text-sm text-[var(--color-stone-600)] leading-relaxed">
-          Gracias por tu compra en{" "}
-          <span className="font-serif text-[var(--color-charcoal)]">Zoa</span>.
-          Recibirás un correo con los detalles de tu pedido y tu guía de envío en
-          breve.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 px-8 py-3.5 bg-[var(--color-charcoal)] text-[var(--color-cream)] font-sans text-xs tracking-[0.25em] uppercase hover:bg-[var(--color-gold)] transition-colors duration-300"
-        >
-          Seguir comprando
-        </Link>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Star, ShieldCheck } from "lucide-react";
+import { X, Star, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 interface Review {
   name:     string;
@@ -71,13 +71,15 @@ function buildDemoReviews(productId: string): Review[] {
 // ── Star components ────────────────────────────────────────────────────────────
 function StarDisplay({ rating }: { rating: number }) {
   return (
-    <span className="flex items-center gap-0.5" aria-label={`${rating} de 5 estrellas`}>
+    <span className="inline-flex items-center gap-0.5" role="img" aria-label={`${rating} de 5 estrellas`}>
       {[1,2,3,4,5].map((s) => {
-        const filled = rating >= s;
-        const half   = !filled && rating >= s - 0.5;
+        const fill = Math.max(0, Math.min(1, rating - (s - 1))); // 0..1 por estrella
         return (
-          <span key={s} className={filled||half ? "text-[var(--color-gold)] text-sm leading-none" : "text-[var(--color-stone-300)] text-sm leading-none"}>
-            {half ? "½" : "★"}
+          <span key={s} className="relative inline-flex" aria-hidden="true">
+            <Star size={14} strokeWidth={1.5} className="text-zoa-slate-60" />
+            <span className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+              <Star size={14} strokeWidth={1.5} className="text-zoa-slate" fill="currentColor" />
+            </span>
           </span>
         );
       })}
@@ -87,6 +89,7 @@ function StarDisplay({ rating }: { rating: number }) {
 
 function StarPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   const [hovered, setHovered] = useState(0);
+  const active = hovered || value;
   return (
     <div className="flex gap-1">
       {[1,2,3,4,5].map((s) => (
@@ -96,10 +99,12 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
           onClick={() => onChange(s)}
           onMouseEnter={() => setHovered(s)}
           onMouseLeave={() => setHovered(0)}
-          className="cursor-pointer text-2xl leading-none transition-colors"
-          style={{ color: s <= (hovered || value) ? "var(--color-gold)" : "var(--color-stone-300)" }}
+          className="flex h-11 w-11 cursor-pointer items-center justify-center leading-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
+          style={{ color: s <= active ? "var(--color-zoa-slate)" : "var(--color-zoa-slate-60)" }}
           aria-label={`${s} estrella${s > 1 ? "s" : ""}`}
-        >★</button>
+        >
+          <Star size={24} strokeWidth={1.4} fill={s <= active ? "currentColor" : "none"} aria-hidden />
+        </button>
       ))}
     </div>
   );
@@ -111,25 +116,22 @@ function ReviewCard({ review, index, total }: { review: Review; index: number; t
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span
-            className="w-6 h-6 rounded-full flex items-center justify-center font-sans text-[9px] font-semibold text-white flex-shrink-0"
-            style={{ backgroundColor: "#c8a97e" }}
-          >
+          <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-xs bg-zoa-slate font-sans text-[10px] font-medium text-zoa-sand">
             {review.name.charAt(0)}
           </span>
-          <span className="font-sans text-[12px] text-[var(--color-charcoal)] font-medium">{review.name}</span>
+          <span className="font-sans text-[12px] font-medium text-zoa-slate">{review.name}</span>
           {review.verified && (
-            <span className="flex items-center gap-0.5 text-[10px] font-sans text-emerald-600">
-              <ShieldCheck size={10} />
+            <span className="flex items-center gap-0.5 font-sans text-[10px] text-zoa-success">
+              <ShieldCheck size={10} aria-hidden />
               Compra verificada
             </span>
           )}
         </div>
-        <span className="font-sans text-[10px] text-[var(--color-stone-400)]">{review.date}</span>
+        <span className="font-sans text-[10px] text-zoa-slate-60">{review.date}</span>
       </div>
       <StarDisplay rating={review.rating} />
-      <p className="font-sans text-[13px] text-[var(--color-stone-600)] leading-relaxed">{review.text}</p>
-      {index < total - 1 && <hr className="border-[var(--color-stone-100)] mt-3" />}
+      <p className="font-sans text-[13px] leading-relaxed text-zoa-slate-60">{review.text}</p>
+      {index < total - 1 && <hr className="mt-4 border-zoa-line" />}
     </div>
   );
 }
@@ -194,25 +196,25 @@ export default function ProductReviews({ productId, productName }: { productId: 
     }
   }
 
+  const inputCls = "w-full border border-zoa-line-strong bg-transparent px-3 py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15 placeholder:text-zoa-slate-60/60";
+
   return (
     <>
-      <div className="border-t border-[var(--color-stone-100)] pt-6 mt-2 space-y-5">
+      <div className="mt-2 space-y-5 border-t border-zoa-line pt-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <p className="font-sans text-[10px] tracking-[0.3em] uppercase text-[var(--color-stone-400)]">
-              Reseñas de clientes
-            </p>
+            <p className="overline">Reseñas de clientes</p>
             <span className="flex items-center gap-1.5">
-              <span className="text-[var(--color-gold)] text-sm leading-none">★</span>
-              <span className="font-sans text-xs text-[var(--color-charcoal)] font-medium">{avgDisplay}</span>
-              <span className="font-sans text-[11px] text-[var(--color-stone-400)]">({allReviews.length})</span>
+              <StarDisplay rating={avg} />
+              <span className="font-sans text-xs font-medium text-zoa-slate tabular-nums">{avgDisplay}</span>
+              <span className="font-sans text-[11px] text-zoa-slate-60 tabular-nums">({allReviews.length})</span>
             </span>
           </div>
           {/* Discrete write review link */}
           <button
             onClick={() => { setModalOpen(true); setSuccess(false); setError(""); }}
-            className="cursor-pointer font-sans text-[10px] tracking-[0.15em] uppercase text-[var(--color-stone-400)] hover:text-[var(--color-gold)] underline underline-offset-2 transition-colors"
+            className="link-underline cursor-pointer font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
           >
             Escribir reseña
           </button>
@@ -233,44 +235,46 @@ export default function ProductReviews({ productId, productName }: { productId: 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-zoa-slate/50 backdrop-blur-sm p-4"
             onClick={() => setModalOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative bg-white w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="relative w-full max-w-md overflow-hidden border border-zoa-line bg-zoa-sand shadow-card"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--color-stone-100)]">
-                <h3 className="font-serif text-lg text-[var(--color-charcoal)]">Escribir reseña</h3>
+              <div className="flex items-center justify-between border-b border-zoa-line px-6 py-4">
+                <h3 className="font-display text-xl leading-none text-zoa-slate">Escribir reseña</h3>
                 <button
                   onClick={() => setModalOpen(false)}
-                  className="cursor-pointer p-1 rounded-lg hover:bg-[var(--color-stone-100)] transition-colors"
+                  className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
                   aria-label="Cerrar"
                 >
-                  <X size={17} />
+                  <X size={17} aria-hidden />
                 </button>
               </div>
 
               <div className="px-6 py-5">
                 {success ? (
-                  <div className="text-center py-6">
-                    <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-                      <ShieldCheck size={24} className="text-emerald-500" />
+                  <div className="py-6 text-center">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-zoa-success">
+                      <CheckCircle2 size={24} className="text-zoa-success" aria-hidden />
                     </div>
-                    <p className="font-serif text-[var(--color-charcoal)] text-lg mb-1">¡Gracias por tu reseña!</p>
-                    <p className="font-sans text-[13px] text-[var(--color-stone-500)]">
-                      Tu opinión ya está visible en el producto. 🎀
+                    <p className="mb-1 font-sans text-base font-medium text-zoa-slate">¡Gracias por tu reseña!</p>
+                    <p className="font-sans text-[13px] text-zoa-slate-60">
+                      Tu opinión ya está visible en el producto.
                     </p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Order ID — optional, for admin reference */}
                     <div>
-                      <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-[var(--color-stone-400)] mb-1.5">
+                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
                         Número de orden <span className="normal-case tracking-normal">(opcional)</span>
                       </label>
                       <input
@@ -278,16 +282,16 @@ export default function ProductReviews({ productId, productName }: { productId: 
                         value={orderId}
                         onChange={(e) => setOrderId(e.target.value)}
                         placeholder="ZOA-XXXXXXXXXX"
-                        className="w-full border border-[var(--color-stone-200)] rounded-lg px-3 py-2.5 font-sans text-[13px] text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-charcoal)] transition-colors placeholder:text-[var(--color-stone-300)]"
+                        className={inputCls}
                       />
-                      <p className="mt-1 font-sans text-[10px] text-[var(--color-stone-400)]">
+                      <p className="mt-1 font-sans text-[10px] text-zoa-slate-60">
                         Encúentralo en tu correo de confirmación. Esto nos ayuda a verificar tu compra.
                       </p>
                     </div>
 
                     {/* Name */}
                     <div>
-                      <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-[var(--color-stone-400)] mb-1.5">
+                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
                         Tu nombre *
                       </label>
                       <input
@@ -295,13 +299,13 @@ export default function ProductReviews({ productId, productName }: { productId: 
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Nombre o alias"
-                        className="w-full border border-[var(--color-stone-200)] rounded-lg px-3 py-2.5 font-sans text-[13px] text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-charcoal)] transition-colors placeholder:text-[var(--color-stone-300)]"
+                        className={inputCls}
                       />
                     </div>
 
                     {/* Rating */}
                     <div>
-                      <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-[var(--color-stone-400)] mb-1.5">
+                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
                         Calificación *
                       </label>
                       <StarPicker value={rating} onChange={setRating} />
@@ -309,7 +313,7 @@ export default function ProductReviews({ productId, productName }: { productId: 
 
                     {/* Review text */}
                     <div>
-                      <label className="block font-sans text-[10px] tracking-[0.2em] uppercase text-[var(--color-stone-400)] mb-1.5">
+                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
                         Tu reseña *
                       </label>
                       <textarea
@@ -317,20 +321,20 @@ export default function ProductReviews({ productId, productName }: { productId: 
                         onChange={(e) => setText(e.target.value)}
                         placeholder="Cuéntanos tu experiencia con este producto…"
                         rows={3}
-                        className="w-full border border-[var(--color-stone-200)] rounded-lg px-3 py-2.5 font-sans text-[13px] text-[var(--color-charcoal)] focus:outline-none focus:border-[var(--color-charcoal)] transition-colors resize-none placeholder:text-[var(--color-stone-300)]"
+                        className={`${inputCls} resize-none`}
                       />
                     </div>
 
                     {/* Error */}
                     {error && (
-                      <p className="font-sans text-[12px] text-red-500">{error}</p>
+                      <p className="font-sans text-[12px] text-zoa-wine">{error}</p>
                     )}
 
                     {/* Submit */}
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-[var(--color-charcoal)] text-[var(--color-cream)] font-sans text-[11px] tracking-[0.2em] uppercase py-3 rounded-lg hover:bg-[var(--color-stone-700)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="flex h-12 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {loading ? "Verificando…" : "Enviar reseña"}
                     </button>

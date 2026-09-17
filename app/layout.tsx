@@ -1,25 +1,26 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Marcellus, Inter } from "next/font/google";
+import { Archivo, Bodoni_Moda } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CTABanner from "@/components/CTABanner";
 import CartDrawer from "@/components/CartDrawer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 
-// ── Logo/heading font: Marcellus — classical, distinctive, editorial elegance ─
-const marcellus = Marcellus({
+// ── Texto/UI: Archivo — neo-grotesca limpia estilo Helvetica ─────────────────
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["400"],
-  variable: "--font-marcellus",
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-archivo",
   display: "swap",
 });
 
-// ── Body font: Inter ─────────────────────────────────────────────────────────
-const inter = Inter({
+// ── Display: Bodoni Moda — serif moderna para títulos y wordmark ─────────────
+const bodoniModa = Bodoni_Moda({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-inter",
+  weight: ["400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-bodoni",
   display: "swap",
 });
 
@@ -44,14 +45,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={`${marcellus.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col bg-[var(--color-cream)]">
+    <html lang="es" className={`${archivo.variable} ${bodoniModa.variable}`} suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col bg-zoa-sand text-zoa-slate font-sans">
         <Navbar />
         {/* Runs synchronously right after Navbar HTML is in the DOM, before paint.
             Sets data-home and --nc so the CSS rule fires correctly pre-hydration. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var h=document.querySelector(".zoa-navbar");if(!h)return;var p=location.pathname;if(p==="/"||p===""){h.setAttribute("data-home","true");h.style.setProperty("--nc","#ffffff")}else{h.setAttribute("data-home","false");h.style.setProperty("--nc","var(--color-charcoal)")}})()`,
+            __html: `(function(){var h=document.querySelector(".zoa-navbar");if(!h)return;var p=location.pathname;if(p==="/"||p===""){h.setAttribute("data-home","true");h.style.setProperty("--nc","#FFF7F5")}else{h.setAttribute("data-home","false");h.style.setProperty("--nc","var(--color-zoa-slate)")}})()`,
           }}
         />
         <CartDrawer />

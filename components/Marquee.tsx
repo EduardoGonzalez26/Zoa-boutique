@@ -1,35 +1,84 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 
-const MESSAGE = "ENVÍOS A TODO MÉXICO";
-// Repeat enough copies to fill viewport at any width
-const COPIES = 12;
-const text = `${MESSAGE} · `.repeat(COPIES);
+export type MarqueeVariant = "sand" | "slate" | "wine";
 
-export default function Marquee() {
+interface MarqueeProps {
+  variant?: MarqueeVariant;
+  items?: string[];
+  className?: string;
+}
+
+const DEFAULT_ITEMS = ["Envíos a todo México", "Pago seguro", "Nueva colección", "Cambios hasta 7 días"];
+
+const VARIANT: Record<MarqueeVariant, { wrapper: string; text: string }> = {
+  sand: {
+    wrapper: "bg-zoa-sand border-y border-zoa-line",
+    text: "text-zoa-slate",
+  },
+  slate: {
+    wrapper: "bg-zoa-slate border-y border-zoa-line-inverse",
+    text: "text-zoa-surface",
+  },
+  wine: {
+    wrapper: "bg-zoa-wine border-y border-zoa-line-inverse",
+    text: "text-zoa-surface",
+  },
+};
+
+/** Rombo hairline — separador editorial (sin emojis). */
+function Diamond() {
   return (
-    <div
-      className="w-full overflow-hidden bg-[var(--color-charcoal)] text-[var(--color-gold)] border-b border-[var(--color-charcoal)] py-1.5"
-      aria-hidden="true"
-    >
-      <motion.div
-        className="flex whitespace-nowrap"
-        animate={{ x: ["0%", "-50%"] }}
-        transition={{
-          duration: 22,
-          ease: "linear",
-          repeat: Infinity,
-        }}
-      >
-        <span className="font-sans text-[9px] tracking-[0.35em] uppercase pr-4">
-          {text}
-        </span>
-        {/* Duplicate for seamless loop */}
-        <span className="font-sans text-[9px] tracking-[0.35em] uppercase pr-4" aria-hidden>
-          {text}
-        </span>
-      </motion.div>
+    <span
+      aria-hidden
+      className="mx-5 inline-block h-1 w-1 shrink-0 rotate-45 border border-current opacity-60"
+    />
+  );
+}
+
+/**
+ * Banda marquee editorial: hairlines arriba/abajo, separadores de rombo,
+ * animación lineal de 40s con pausa al hover (CSS puro).
+ * Con `prefers-reduced-motion` se renderiza una versión estática centrada.
+ */
+export default function Marquee({
+  variant = "sand",
+  items = DEFAULT_ITEMS,
+  className = "",
+}: MarqueeProps) {
+  const reduceMotion = useReducedMotion();
+  const tone = VARIANT[variant];
+
+  return (
+    <div className={`w-full ${tone.wrapper} ${className}`} aria-hidden="true">
+      {reduceMotion ? (
+        <p
+          className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 py-3 text-center font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}
+        >
+          {items.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </p>
+      ) : (
+        <div className="marquee-wrap py-3">
+          <div className="marquee-track">
+            {/* Dos copias idénticas → bucle perfecto a -50% */}
+            {[0, 1].map((copy) => (
+              <div key={copy} className="flex items-center whitespace-nowrap">
+                {items.map((item, i) => (
+                  <span key={`${copy}-${i}`} className="flex items-center">
+                    <span className={`font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}>
+                      {item}
+                    </span>
+                    <Diamond />
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

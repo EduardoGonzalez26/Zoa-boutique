@@ -18,9 +18,9 @@ interface MercadoPagoWrapperProps {
 export default function MercadoPagoWrapper({ initialization, onSubmit }: MercadoPagoWrapperProps) {
   if (!PUBLIC_KEY) {
     return (
-      <div className="p-4 text-center border border-red-200 rounded-lg bg-red-50">
-        <p className="text-sm text-red-600">
-          ⚠️ MercadoPago no está configurado.<br />
+      <div className="rounded-xs border border-zoa-error p-4 text-center">
+        <p className="font-sans text-sm text-zoa-error">
+          MercadoPago no está configurado.<br />
           <span className="text-xs">Agrega NEXT_PUBLIC_MP_PUBLIC_KEY en .env.local</span>
         </p>
       </div>

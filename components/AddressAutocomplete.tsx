@@ -98,7 +98,8 @@ export default function AddressAutocomplete({
       <div className="relative">
         <MapPin
           size={13}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] pointer-events-none"
+          aria-hidden
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zoa-slate-60"
         />
         <input
           type="text"
@@ -107,18 +108,20 @@ export default function AddressAutocomplete({
           onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
+          aria-label={placeholder}
           className={`${className} pl-8 pr-8`}
         />
         {loading && (
           <Loader2
             size={13}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-stone-400)] animate-spin"
+            aria-hidden
+            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-zoa-slate-60"
           />
         )}
       </div>
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-[var(--color-stone-200)] rounded-lg shadow-xl overflow-hidden max-h-64 overflow-y-auto">
+        <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto overflow-hidden border border-zoa-line bg-zoa-surface">
           {suggestions.map((s, i) => {
             const a = s.address;
             const mainLine = [a.road, a.house_number].filter(Boolean).join(" ") || s.display_name.split(",")[0];
@@ -126,17 +129,17 @@ export default function AddressAutocomplete({
               .filter(Boolean)
               .join(", ");
             return (
-              <li key={i}>
+              <li key={i} className="list-none">
                 <button
                   type="button"
                   onClick={() => handleSelect(s)}
-                  className="w-full text-left px-4 py-3 hover:bg-[var(--color-stone-100)] transition-colors border-b border-[var(--color-stone-100)] last:border-0"
+                  className="w-full min-h-11 cursor-pointer border-b border-zoa-line px-4 py-3 text-left transition-colors duration-200 last:border-0 hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate"
                 >
-                  <p className="font-sans text-[13px] text-[var(--color-charcoal)] leading-snug">
+                  <p className="font-sans text-[13px] leading-snug text-zoa-slate">
                     {mainLine}
                   </p>
                   {subLine && (
-                    <p className="font-sans text-[11px] text-[var(--color-stone-400)] mt-0.5">
+                    <p className="mt-0.5 font-sans text-[11px] text-zoa-slate-60">
                       {subLine}
                     </p>
                   )}
@@ -144,8 +147,8 @@ export default function AddressAutocomplete({
               </li>
             );
           })}
-          <li>
-            <p className="px-4 py-2 text-[10px] text-[var(--color-stone-400)] font-sans text-center border-t border-[var(--color-stone-100)]">
+          <li className="list-none">
+            <p className="border-t border-zoa-line px-4 py-2 text-center font-sans text-[10px] text-zoa-slate-60">
               Datos de OpenStreetMap
             </p>
           </li>
