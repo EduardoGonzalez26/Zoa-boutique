@@ -70,11 +70,11 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
           aria-label="Breadcrumb"
           className="hairline-b flex flex-wrap items-center gap-2 py-5 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate-60"
         >
-          <Link href="/" className="link-underline cursor-pointer transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+          <Link href="/" className="link-underline cursor-pointer transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
             Inicio
           </Link>
           <span aria-hidden>/</span>
-          <Link href="/blog" className="link-underline cursor-pointer transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+          <Link href="/blog" className="link-underline cursor-pointer transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
             Blog
           </Link>
           <span aria-hidden>/</span>
@@ -83,7 +83,7 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
 
         {/* ── Cabecera del artículo ── */}
         <header className="pb-10 pt-12 md:pt-16">
-          <Overline>{article.category}</Overline>
+          <Overline tone="forest">{article.category}</Overline>
           <h1 className="mt-6 max-w-4xl text-balance font-display text-[clamp(2.25rem,5.5vw,4.75rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             {article.title}
           </h1>
@@ -124,7 +124,7 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
               <div
                 className="pt-8 text-[16px] leading-[1.85] text-zoa-slate-60"
                 dangerouslySetInnerHTML={{ __html: article.content
-                  .replace(/<h2>/g, '<h2 class="mt-12 mb-4 font-display text-[clamp(1.5rem,2.6vw,2rem)] font-normal leading-[1.12] tracking-[-0.02em] text-zoa-slate">')
+                  .replace(/<h2>/g, '<h2 class="mt-12 mb-4 border-t border-zoa-forest-35 pt-5 font-display text-[clamp(1.5rem,2.6vw,2rem)] font-normal leading-[1.12] tracking-[-0.02em] text-zoa-slate">')
                   .replace(/<h3>/g, '<h3 class="mt-9 mb-3 font-display text-[clamp(1.15rem,1.8vw,1.35rem)] font-normal leading-[1.2] tracking-[-0.01em] text-zoa-slate">')
                   .replace(/<p>/g, '<p class="mb-5">')
                   .replace(/<ul>/g, '<ul class="mb-6 list-disc space-y-2 pl-5 marker:text-zoa-slate-60">')
@@ -133,7 +133,7 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
                   .replace(/<blockquote>/g, '<blockquote class="my-8 border-l border-zoa-line-strong pl-5 font-display text-[1.15rem] italic leading-[1.6] text-zoa-slate">')
                   .replace(/<strong>/g, '<strong class="font-medium text-zoa-slate">')
                   .replace(/<em>/g, '<em class="font-medium not-italic text-zoa-slate">')
-                  .replace(/<a /g, '<a class="text-zoa-slate underline decoration-zoa-slate decoration-1 underline-offset-4 transition-opacity hover:opacity-60" ')
+                  .replace(/<a /g, '<a class="text-zoa-slate underline decoration-zoa-slate decoration-1 underline-offset-4 transition-colors hover:text-zoa-forest" ')
                   .replace(/<hr \/>/g, '<hr class="my-10 border-zoa-line" />')
                 }}
               />

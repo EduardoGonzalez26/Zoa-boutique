@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
+import useMounted from "@/components/ui/useMounted";
 
 type RevealTag = "div" | "section" | "article" | "li" | "span" | "p";
 
@@ -50,11 +51,15 @@ export default function Reveal({
   once = true,
 }: RevealProps) {
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  // Tras montar: con RM se renderiza estático; el HTML del primer render
+  // (cliente y servidor) siempre pasa por la rama `motion`.
+  const rm = mounted && reduceMotion;
   const Tag = TAGS[as] as React.ElementType;
 
   const stagger = offset !== undefined ? Math.min(offset, MAX_STAGGER) * STAGGER_STEP : 0;
 
-  if (reduceMotion) {
+  if (rm) {
     return <Tag className={className}>{children}</Tag>;
   }
 

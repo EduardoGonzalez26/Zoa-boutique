@@ -198,9 +198,9 @@ export default function TiendaClient({ products }: TiendaClientProps) {
             <button
               onClick={() => { setFilter("categoria", ""); onClose?.(); }}
               aria-pressed={!activeCategory}
-              className={`${FILTER_ROW} ${!activeCategory ? "font-medium text-zoa-slate" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
+              className={`${FILTER_ROW} ${!activeCategory ? "font-medium text-zoa-forest" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
             >
-              {!activeCategory && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-slate" />}
+              {!activeCategory && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-forest" />}
               Todas
             </button>
           </li>
@@ -209,9 +209,9 @@ export default function TiendaClient({ products }: TiendaClientProps) {
               <button
                 onClick={() => { setFilter("categoria", activeCategory === cat ? "" : cat); onClose?.(); }}
                 aria-pressed={activeCategory === cat}
-                className={`${FILTER_ROW} ${activeCategory === cat ? "font-medium text-zoa-slate" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
+                className={`${FILTER_ROW} ${activeCategory === cat ? "font-medium text-zoa-forest" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
               >
-                {activeCategory === cat && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-slate" />}
+                {activeCategory === cat && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-forest" />}
                 {cat}
               </button>
             </li>
@@ -239,7 +239,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
               aria-pressed={activeSize === s}
               className={`h-11 w-11 cursor-pointer rounded-xs border font-sans text-[12px] tracking-wide transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-1 ${
                 activeSize === s
-                  ? "border-zoa-slate bg-zoa-slate text-zoa-sand"
+                  ? "border-zoa-forest bg-zoa-forest text-zoa-surface"
                   : "border-zoa-line-strong text-zoa-slate hover:border-zoa-slate"
               }`}
             >{s}</button>
@@ -280,9 +280,9 @@ export default function TiendaClient({ products }: TiendaClientProps) {
             <button
               onClick={() => { setFilter("coleccion", ""); onClose?.(); }}
               aria-pressed={!activeCollection}
-              className={`${FILTER_ROW} ${!activeCollection ? "font-medium text-zoa-slate" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
+              className={`${FILTER_ROW} ${!activeCollection ? "font-medium text-zoa-forest" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
             >
-              {!activeCollection && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-slate" />}
+              {!activeCollection && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-forest" />}
               Todas
             </button>
           </li>
@@ -291,9 +291,9 @@ export default function TiendaClient({ products }: TiendaClientProps) {
               <button
                 onClick={() => { setFilter("coleccion", activeCollection === col ? "" : col); onClose?.(); }}
                 aria-pressed={activeCollection === col}
-                className={`${FILTER_ROW} ${activeCollection === col ? "font-medium text-zoa-slate" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
+                className={`${FILTER_ROW} ${activeCollection === col ? "font-medium text-zoa-forest" : "text-zoa-slate-60 hover:text-zoa-slate"}`}
               >
-                {activeCollection === col && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-slate" />}
+                {activeCollection === col && <span aria-hidden className="h-3.5 w-0.5 shrink-0 bg-zoa-forest" />}
                 {col}
               </button>
             </li>
@@ -344,7 +344,8 @@ export default function TiendaClient({ products }: TiendaClientProps) {
               {activeCategory || "Todos los productos"}
             </h1>
             <p className="mt-4 font-sans text-[13px] text-zoa-slate-60 tabular">
-              {sorted.length} {sorted.length === 1 ? "pieza" : "piezas"}
+              <span className="text-zoa-forest">{sorted.length}</span>{" "}
+              {sorted.length === 1 ? "pieza" : "piezas"}
               {(searchQuery || inlineSearch) && ` para "${searchQuery || inlineSearch}"`}
             </p>
           </div>
@@ -360,7 +361,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
                   id="orden"
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortKey)}
-                  className="min-h-11 cursor-pointer appearance-none border border-zoa-line-strong bg-transparent py-2 pl-4 pr-10 font-sans text-[11px] uppercase tracking-[0.14em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate focus:border-zoa-slate focus:outline-none focus:ring-2 focus:ring-zoa-slate/15"
+                  className="min-h-11 cursor-pointer appearance-none border border-zoa-line-strong bg-transparent py-2 pl-4 pr-10 font-sans text-[11px] uppercase tracking-[0.14em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate focus:border-zoa-forest focus:outline-none focus:ring-2 focus:ring-zoa-forest/15"
                 >
                   {SORT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -399,12 +400,12 @@ export default function TiendaClient({ products }: TiendaClientProps) {
 
             <button
               onClick={() => setFiltersOpen(true)}
-              className="flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-line-strong px-5 font-sans text-[10px] uppercase tracking-[0.16em] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate lg:hidden"
+              className="flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-forest-35 px-5 font-sans text-[10px] uppercase tracking-[0.16em] text-zoa-forest transition-colors duration-200 hover:bg-zoa-forest/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest lg:hidden"
             >
               <SlidersHorizontal size={13} aria-hidden />
               Filtrar
               {activeFilterCount > 0 && (
-                <span aria-hidden className="flex h-4 min-w-4 items-center justify-center bg-zoa-slate px-1 font-sans text-[9px] leading-none text-zoa-sand tabular">
+                <span aria-hidden className="flex h-4 min-w-4 items-center justify-center bg-zoa-forest px-1 font-sans text-[9px] leading-none text-zoa-surface tabular">
                   {activeFilterCount}
                 </span>
               )}
@@ -416,12 +417,12 @@ export default function TiendaClient({ products }: TiendaClientProps) {
       {/* ── Chips de filtros activos ── */}
       {hasFilters && (
         <div className="container-zoa flex flex-wrap items-center gap-2 py-4">
-          {activeCategory && <Chip variant="sand" onRemove={() => setFilter("categoria", "")}>{activeCategory}</Chip>}
-          {activeCollection && <Chip variant="sand" onRemove={() => setFilter("coleccion", "")}>{activeCollection}</Chip>}
-          {activeSize && <Chip variant="sand" onRemove={() => setFilter("talla", "")}>Talla {activeSize}</Chip>}
+          {activeCategory && <Chip variant="forest" onRemove={() => setFilter("categoria", "")}>{activeCategory}</Chip>}
+          {activeCollection && <Chip variant="forest" onRemove={() => setFilter("coleccion", "")}>{activeCollection}</Chip>}
+          {activeSize && <Chip variant="forest" onRemove={() => setFilter("talla", "")}>Talla {activeSize}</Chip>}
           {activeColor && (
             <Chip
-              variant="sand"
+              variant="forest"
               onRemove={() => setFilter("color", "")}
               leading={
                 <span
@@ -435,7 +436,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
             </Chip>
           )}
           {(searchQuery || inlineSearch) && (
-            <Chip variant="outline" onRemove={clearAll}>
+            <Chip variant="forest" onRemove={clearAll}>
               &quot;{searchQuery || inlineSearch}&quot;
             </Chip>
           )}
@@ -509,7 +510,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
             >
               {/* Drag handle hairline */}
               <div className="flex flex-none flex-col items-center pt-3">
-                <span aria-hidden className="h-px w-12 bg-zoa-line-strong" />
+                <span aria-hidden className="h-px w-12 bg-zoa-forest" />
               </div>
 
               <div className="flex flex-none items-center justify-between px-5 py-4">

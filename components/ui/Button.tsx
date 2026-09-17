@@ -48,22 +48,22 @@ const SIZE: Record<ButtonSize, string> = {
 
 const VARIANT: Record<Exclude<ButtonVariant, "link-arrow">, string> = {
   primary:
-    "bg-zoa-forest text-zoa-surface hover:bg-zoa-forest-dark focus-visible:ring-zoa-slate",
+    "bg-zoa-forest text-zoa-surface hover:bg-zoa-forest-dark focus-visible:ring-zoa-forest",
   outline:
-    "border border-zoa-line-strong bg-transparent text-zoa-slate hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:ring-zoa-slate",
+    "border border-zoa-forest-35 bg-transparent text-zoa-forest hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:ring-zoa-forest",
   "ghost-inverse":
     "border border-zoa-surface/60 bg-transparent text-zoa-surface hover:border-zoa-surface hover:bg-zoa-surface/10 focus-visible:ring-zoa-surface",
   inverse:
-    "bg-zoa-surface text-zoa-slate hover:bg-zoa-sand focus-visible:ring-zoa-surface",
+    "bg-zoa-surface text-zoa-forest hover:bg-zoa-sand focus-visible:ring-zoa-surface",
 };
 
 /**
- * Botón/link editorial v4. Variantes:
+ * Botón/link editorial v4.1. Variantes:
  * - `primary`       → forest, acción principal ("Añadir a la bolsa", pagar)
- * - `outline`       → borde line-strong → slate
+ * - `outline`       → borde forest-35 + texto forest → invierte a forest al hover
  * - `ghost-inverse` → borde off-white/60 sobre imagen o banda oscura
- * - `inverse`       → fondo off-white + texto slate (sobre banda slate/wine)
- * - `link-arrow`    → texto + flecha que se desplaza al hover
+ * - `inverse`       → fondo off-white + texto forest (sobre banda slate/forest/wine)
+ * - `link-arrow`    → texto + flecha forest que se desplaza al hover
  */
 export default function Button(props: ButtonProps) {
   const {
@@ -96,7 +96,7 @@ export default function Button(props: ButtonProps) {
 
   const classes = isLinkArrow
     ? `group/btn inline-flex cursor-pointer items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current focus-visible:ring-offset-2 focus-visible:ring-offset-transparent ${
-        tone === "inverse" ? "text-zoa-surface" : "text-zoa-slate"
+        tone === "inverse" ? "text-zoa-surface" : "text-zoa-forest"
       } ${className}`
     : `${BASE} ${SIZE[size]} ${VARIANT[variant]} ${className}`;
 

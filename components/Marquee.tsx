@@ -1,8 +1,9 @@
 "use client";
 
 import { useReducedMotion } from "framer-motion";
+import useMounted from "@/components/ui/useMounted";
 
-export type MarqueeVariant = "sand" | "slate" | "wine";
+export type MarqueeVariant = "sand" | "slate" | "wine" | "forest";
 
 interface MarqueeProps {
   variant?: MarqueeVariant;
@@ -23,6 +24,11 @@ const VARIANT: Record<MarqueeVariant, { wrapper: string; text: string }> = {
   },
   wine: {
     wrapper: "bg-zoa-wine border-y border-zoa-line-inverse",
+    text: "text-zoa-surface",
+  },
+  /* v4.1 · Banda forest full-bleed (la única de la página, con cupo medido) */
+  forest: {
+    wrapper: "bg-zoa-forest border-y border-zoa-line-inverse",
     text: "text-zoa-surface",
   },
 };
@@ -48,11 +54,14 @@ export default function Marquee({
   className = "",
 }: MarqueeProps) {
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  // La variante estática RM solo se sirve tras montar (SSR y primer render: marquee).
+  const rm = mounted && reduceMotion;
   const tone = VARIANT[variant];
 
   return (
     <div className={`w-full ${tone.wrapper} ${className}`} aria-hidden="true">
-      {reduceMotion ? (
+      {rm ? (
         <p
           className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 py-3 text-center font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}
         >

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef } from "react";
 import { useInView, useReducedMotion } from "framer-motion";
+import useMounted from "@/components/ui/useMounted";
 
 interface ImageRevealProps {
   src: string;
@@ -40,10 +41,14 @@ export default function ImageReveal({
 }: ImageRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
   const inView = useInView(ref, { once: true, margin: "-80px" });
 
   const stagger = offset !== undefined ? Math.min(offset, 8) * 0.07 : 0;
-  const revealed = reduceMotion || inView;
+  // `mounted` mantiene el primer render idéntico al SSR (clase `is-revealed`
+  // solo aparece tras montar con RM).
+  const rm = mounted && reduceMotion;
+  const revealed = rm || inView;
   const transitionDelay = `${delay + stagger}s`;
 
   return (

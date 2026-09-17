@@ -1,26 +1,36 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import Overline from "@/components/ui/Overline";
 import Button from "@/components/ui/Button";
+import useMounted from "@/components/ui/useMounted";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
- * Banda global slate full-bleed con tinta off-white.
+ * Banda global full-bleed con tinta off-white.
  * Aparece al pie de todas las páginas: cierre editorial antes del footer.
+ * Cupo v4.1 (1 banda forest por página): en la home la banda forest es el
+ * `Marquee` y este banner queda slate; en el resto de páginas este banner es
+ * la única banda forest.
  */
 export default function CTABanner() {
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  const rm = mounted && reduceMotion;
+  const pathname = usePathname();
+  const isHome = pathname === "/" || pathname === "";
+  const band = isHome ? "bg-zoa-slate" : "bg-zoa-forest";
 
   const reveal = {
-    initial: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 },
+    initial: rm ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 },
     whileInView: { opacity: 1, y: 0 },
     viewport: { once: true, margin: "-80px" as const },
   };
 
   return (
-    <section className="bg-zoa-slate text-zoa-surface">
+    <section className={`${band} text-zoa-surface`}>
       <div className="container-zoa py-[var(--space-section)]">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end md:gap-14">
 

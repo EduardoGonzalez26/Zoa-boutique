@@ -50,7 +50,7 @@ export default function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Contactar por WhatsApp"
-      className="zoa-whatsapp group fixed bottom-6 right-5 z-50 flex min-h-11 items-center gap-2.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+      className="zoa-whatsapp group fixed bottom-6 right-5 z-50 flex min-h-11 items-center gap-2.5 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
       style={{ willChange: "transform" }}
     >
       {/* Label — se desliza al hover, hairline */}

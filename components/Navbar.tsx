@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingBag, Menu, X, Search, ChevronDown, Instagram, Phone, ArrowRight } from "lucide-react";
+import { ShoppingBag, Menu, X, Search, ChevronDown, Instagram, Phone } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from "framer-motion";
-import { useState, useEffect, useRef, useSyncExternalStore } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { useRouter, usePathname } from "next/navigation";
+import Button from "@/components/ui/Button";
+import useMounted from "@/components/ui/useMounted";
 
 const CATEGORIES = [
   "Blusas","Sweaters","Sacos","Chamarras",
@@ -21,37 +23,52 @@ const COLLECTIONS = [
   { label: "Recomendados",       slug: "Recomendados"       },
 ];
 
+// Enlaces del desplegable "Tienda" (fila superior y drawer móvil)
+const SHOP_LINKS: { label: string; href: string; external?: boolean }[] = [
+  { label: "Todos los productos",    href: "/tienda" },
+  { label: "Blog",                   href: "/blog" },
+  { label: "Cambios y devoluciones", href: "/devoluciones" },
+  { label: "Rastrear envío",         href: "https://tracking.skydropx.com/es-MX/page/zoa", external: true },
+];
+
 const ANNOUNCEMENT = ["Envíos a todo México", "Pago seguro", "Nueva colección", "Cambios hasta 7 días"];
 
-// Imagen destacada del mega menú (frame editorial de la colección — asset existente)
+// Imagen destacada del mega menú (poster editorial de la colección — clip vigente)
 const MEGA_IMAGE =
-  "https://res.cloudinary.com/dsx1gi6mt/video/upload/so_1,f_jpg/v1775747428/que_continu%CC%81en_caminando_202604090909_tsrvo7.jpg";
+  "https://res.cloudinary.com/ppo6ze2s/video/upload/so_1,f_jpg,q_auto,w_1600/v1789510134/Two_models_walking_in_city_20260915160740.jpg";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-// Nav item base — el color se inyecta con var(--nc) para responder a data-home / data-scrolled
+// Nav item base — el color se inyecta con var(--nc) para responder a data-home / data-scrolled.
+// El hover (v4.1) deja la opacidad y pasa a color con var(--nc-hover): off-white/72 sobre
+// video (home sin scroll) y forest cuando el nav es sólido.
 const NAV_ITEM =
-  "relative inline-flex cursor-pointer items-center gap-1.5 py-4 font-sans text-[11px] font-normal uppercase tracking-[0.22em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
+  "relative inline-flex cursor-pointer items-center gap-1.5 py-4 font-sans text-[11px] font-normal uppercase tracking-[0.22em] text-[color:var(--nc)] transition-colors duration-200 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
 
 const MEGA_LINK =
-  "group flex cursor-pointer items-center justify-between border-b border-zoa-line py-3 font-sans text-[13px] text-zoa-slate transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate";
+  "group flex cursor-pointer items-center justify-between border-b border-zoa-line py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate";
 
-type OpenMenu = "collections" | "categories" | null;
+// v4.1 · Título de columna del mega menú / drawer: regla corta forest sobre Bodoni
+const MENU_TITLE_RULE = "rule-forest mb-3";
 
-/** Suscripción vacía: `useSyncExternalStore` la usa solo para leer el snapshot de cliente. */
-const emptySubscribe = () => () => {};
+type OpenMenu = "collections" | "categories" | "shop" | null;
 
-/** `true` únicamente tras hidratar — evita mismatches con el carrito persistido. */
-function useIsMounted() {
-  return useSyncExternalStore(emptySubscribe, () => true, () => false);
-}
+/** Etiqueta accesible del panel para cada trigger (`aria-label` del region). */
+const MENU_LABELS: Record<Exclude<OpenMenu, null>, string> = {
+  collections: "Colecciones",
+  categories: "Categorías",
+  shop: "Tienda",
+};
 
-/** Rombo hairline — separador editorial del marquee de anuncio. */
+/** Orden de los triggers en la fila superior del nav desktop. */
+const MENU_ORDER: Exclude<OpenMenu, null>[] = ["collections", "categories", "shop"];
+
+/** Rombo hairline forest — separador editorial del marquee de anuncio (texto slate-60 intacto). */
 function HairlineDiamond({ className = "" }: { className?: string }) {
   return (
     <span
       aria-hidden
-      className={`mx-4 inline-block h-1 w-1 shrink-0 rotate-45 border border-current opacity-60 ${className}`}
+      className={`mx-4 inline-block h-1 w-1 shrink-0 rotate-45 border border-zoa-forest opacity-60 ${className}`}
     />
   );
 }
@@ -68,7 +85,10 @@ export default function Navbar() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const desktopNavRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
-  const isMounted = useIsMounted();
+  // `useMounted` (compartido) evita mismatches con el carrito persistido y con RM:
+  // `false` en SSR y primer render del cliente.
+  const isMounted = useMounted();
+  const rm = isMounted && reduceMotion;
 
   // ── Barra de progreso de scroll (transform, sin re-render por frame) ──
   const { scrollYProgress } = useScroll();
@@ -154,7 +174,7 @@ export default function Navbar() {
         style={{ "--nc": navColor } as React.CSSProperties}
       >
         {/* ── Progreso de scroll: 1px forest en el borde superior ── */}
-        {reduceMotion ? (
+        {rm ? (
           <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-zoa-forest/35" />
         ) : (
           <motion.span
@@ -172,7 +192,7 @@ export default function Navbar() {
           }`}
         >
           <div className="flex h-8 items-center text-zoa-slate-60">
-            {reduceMotion ? (
+            {rm ? (
               <p className="w-full text-center font-sans text-[10px] uppercase tracking-[0.25em]">
                 {ANNOUNCEMENT.join(" · ")}
               </p>
@@ -204,8 +224,7 @@ export default function Navbar() {
             <Link
               href="/"
               aria-label="Zoa — Inicio"
-              className="cursor-pointer font-display text-[clamp(22px,2.4vw,30px)] leading-none tracking-[0.14em] transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
-              style={{ color: "var(--nc)" }}
+              className="cursor-pointer font-display text-[clamp(22px,2.4vw,30px)] leading-none tracking-[0.14em] text-[color:var(--nc)] transition-colors duration-300 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
             >
               ZOA<sup className="align-super text-[0.4em] tracking-normal opacity-70">®</sup>
             </Link>
@@ -217,72 +236,33 @@ export default function Navbar() {
               <ul className="m-0 flex list-none items-center justify-center gap-7 p-0 lg:gap-9">
 
                 <li className="list-none">
-                  <Link href="/" className={NAV_ITEM} style={{ color: "var(--nc)" }}>
+                  <Link href="/" className={NAV_ITEM}>
                     <span className="link-underline">Inicio</span>
                   </Link>
                 </li>
 
-                {/* Colecciones → mega menú */}
-                <li className="list-none">
-                  <button
-                    type="button"
-                    aria-haspopup="true"
-                    aria-expanded={openMenu === "collections"}
-                    aria-controls="mega-menu"
-                    onClick={() => setOpenMenu((v) => (v === "collections" ? null : "collections"))}
-                    onMouseEnter={() => setOpenMenu("collections")}
-                    className={NAV_ITEM}
-                    style={{ color: "var(--nc)" }}
-                  >
-                    <span className="link-underline">Colecciones</span>
-                    <ChevronDown
-                      size={12}
-                      strokeWidth={1.8}
-                      aria-hidden
-                      className={`transition-transform duration-300 ${openMenu !== null ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                </li>
-
-                {/* Categorías → mega menú */}
-                <li className="list-none">
-                  <button
-                    type="button"
-                    aria-haspopup="true"
-                    aria-expanded={openMenu === "categories"}
-                    aria-controls="mega-menu"
-                    onClick={() => setOpenMenu((v) => (v === "categories" ? null : "categories"))}
-                    onMouseEnter={() => setOpenMenu("categories")}
-                    className={NAV_ITEM}
-                    style={{ color: "var(--nc)" }}
-                  >
-                    <span className="link-underline">Categorías</span>
-                    <ChevronDown
-                      size={12}
-                      strokeWidth={1.8}
-                      aria-hidden
-                      className={`transition-transform duration-300 ${openMenu !== null ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                </li>
-
-                <li className="list-none">
-                  <Link href="/blog" className={NAV_ITEM} style={{ color: "var(--nc)" }}>
-                    <span className="link-underline">Blog</span>
-                  </Link>
-                </li>
-
-                <li className="list-none">
-                  <a
-                    href="https://tracking.skydropx.com/es-MX/page/zoa"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={NAV_ITEM}
-                    style={{ color: "var(--nc)" }}
-                  >
-                    <span className="link-underline">Rastrear envío</span>
-                  </a>
-                </li>
+                {/* Colecciones · Categorías · Tienda → panel desplegable independiente */}
+                {MENU_ORDER.map((key) => (
+                  <li key={key} className="list-none">
+                    <button
+                      type="button"
+                      aria-haspopup="true"
+                      aria-expanded={openMenu === key}
+                      aria-controls="mega-menu"
+                      onClick={() => setOpenMenu((v) => (v === key ? null : key))}
+                      onMouseEnter={() => setOpenMenu(key)}
+                      className={NAV_ITEM}
+                    >
+                      <span className="link-underline">{MENU_LABELS[key]}</span>
+                      <ChevronDown
+                        size={12}
+                        strokeWidth={1.8}
+                        aria-hidden
+                        className={`transition-transform duration-300 ${openMenu === key ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  </li>
+                ))}
               </ul>
             </nav>
           </div>
@@ -317,7 +297,7 @@ export default function Navbar() {
                       animate={{ scale: 1 }}
                       exit={{ scale: 0 }}
                       transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                      className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center bg-zoa-slate px-1 font-sans text-[9px] font-medium leading-none text-zoa-surface tabular md:hidden"
+                      className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center bg-zoa-forest px-1 font-sans text-[9px] font-medium leading-none text-zoa-surface tabular md:hidden"
                     >
                       {count > 99 ? "99+" : count}
                     </motion.span>
@@ -342,118 +322,169 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ── Mega menú full-bleed (#FFF7F5) — 4 columnas ── */}
+        {/* ── Panel desplegable full-bleed (#FFF7F5) — un bloque por menú ── */}
         <AnimatePresence>
           {openMenu !== null && (
             <motion.div
               key="mega"
               id="mega-menu"
-              initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
+              role="region"
+              aria-label={MENU_LABELS[openMenu]}
+              initial={rm ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
+              exit={rm ? { opacity: 1, y: 0 } : { opacity: 0, y: -8 }}
               transition={{ duration: 0.25, ease: EASE }}
               className="absolute inset-x-0 top-full hidden border-t border-zoa-line bg-zoa-surface md:block"
             >
-              <div className="container-zoa grid grid-cols-1 gap-10 py-10 md:grid-cols-3 xl:grid-cols-4">
-                {/* Colecciones */}
-                <div>
-                  <p className="font-display text-xl leading-none text-zoa-slate">Colecciones</p>
-                  <ul className="m-0 mt-5 list-none border-t border-zoa-line p-0">
-                    {COLLECTIONS.map((c, i) => (
-                      <li key={c.slug} className="list-none">
-                        <Link
-                          href={`/tienda?coleccion=${encodeURIComponent(c.slug)}`}
-                          onClick={closeAll}
-                          className={MEGA_LINK}
-                        >
-                          {c.label}
-                          <span className="font-sans text-[10px] tracking-[0.16em] text-zoa-slate-60 tabular">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {/* key={openMenu} → el contenido cambia al instante entre triggers (sin salida) */}
+              <motion.div
+                key={openMenu}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.18, ease: EASE }}
+                className="container-zoa py-10"
+              >
+                {openMenu === "collections" && (
+                  <div className="grid grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    {/* Listado 01–05 */}
+                    <div>
+                      <span aria-hidden className={MENU_TITLE_RULE} />
+                      <p className="font-display text-xl leading-none text-zoa-slate">Colecciones</p>
+                      <ul className="m-0 mt-5 list-none border-t border-zoa-line p-0">
+                        {COLLECTIONS.map((c, i) => (
+                          <li key={c.slug} className="list-none">
+                            <Link
+                              href={`/tienda?coleccion=${encodeURIComponent(c.slug)}`}
+                              onClick={closeAll}
+                              className={MEGA_LINK}
+                            >
+                              {c.label}
+                              <span className="font-sans text-[10px] tracking-[0.16em] text-zoa-slate-60 tabular">
+                                {String(i + 1).padStart(2, "0")}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
 
-                {/* Categorías */}
-                <div>
-                  <p className="font-display text-xl leading-none text-zoa-slate">Categorías</p>
-                  <ul className="m-0 mt-5 grid list-none grid-cols-2 border-t border-zoa-line p-0">
-                    <li className="list-none border-b border-zoa-line pr-4">
-                      <Link href="/tienda" onClick={closeAll} className={MEGA_LINK}>
-                        Ver todo
-                      </Link>
-                    </li>
-                    {CATEGORIES.map((cat, i) => (
-                      <li key={cat} className={`list-none border-b border-zoa-line ${i % 2 === 0 ? "pr-4" : ""}`}>
-                        <Link
-                          href={`/tienda?categoria=${encodeURIComponent(cat)}`}
-                          onClick={closeAll}
-                          className={MEGA_LINK}
-                        >
-                          {cat}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Tienda / enlaces */}
-                <div>
-                  <p className="font-display text-xl leading-none text-zoa-slate">Tienda</p>
-                  <ul className="m-0 mt-5 list-none border-t border-zoa-line p-0">
-                    <li className="list-none">
-                      <Link href="/tienda" onClick={closeAll} className={MEGA_LINK}>
-                        Todos los productos
-                      </Link>
-                    </li>
-                    <li className="list-none">
-                      <Link href="/blog" onClick={closeAll} className={MEGA_LINK}>
-                        Blog
-                      </Link>
-                    </li>
-                    <li className="list-none">
-                      <Link href="/devoluciones" onClick={closeAll} className={MEGA_LINK}>
-                        Cambios y devoluciones
-                      </Link>
-                    </li>
-                    <li className="list-none">
-                      <a
-                        href="https://tracking.skydropx.com/es-MX/page/zoa"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={closeAll}
-                        className={MEGA_LINK}
-                      >
-                        Rastrear envío
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Destacado editorial + CTA */}
-                <div className="hidden xl:block">
-                  <p className="font-display text-xl leading-none text-zoa-slate">Destacado</p>
-                  <div className="relative mt-5 aspect-[4/5] w-full overflow-hidden bg-zoa-sand">
-                    <Image
-                      src={MEGA_IMAGE}
-                      alt="Colección Zoa"
-                      fill
-                      sizes="320px"
-                      className="object-cover object-center"
-                    />
+                    {/* Destacado editorial + CTA (solo xl) */}
+                    <div className="hidden xl:block">
+                      <span aria-hidden className={MENU_TITLE_RULE} />
+                      <p className="font-display text-xl leading-none text-zoa-slate">Destacado</p>
+                      <div className="relative mt-5 aspect-[4/5] w-full overflow-hidden bg-zoa-sand">
+                        <Image
+                          src={MEGA_IMAGE}
+                          alt="Colección Zoa"
+                          fill
+                          sizes="320px"
+                          className="object-cover object-center"
+                        />
+                      </div>
+                      <Button variant="link-arrow" href="/tienda" onClick={closeAll} className="mt-5">
+                        Ver la colección
+                      </Button>
+                    </div>
                   </div>
-                  <Link
-                    href="/tienda"
-                    onClick={closeAll}
-                    className="group mt-5 inline-flex cursor-pointer items-center gap-2 border-b border-zoa-slate pb-1 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
-                  >
-                    Ver la colección
-                    <ArrowRight size={12} aria-hidden className="transition-transform duration-200 group-hover:translate-x-1" />
-                  </Link>
-                </div>
-              </div>
+                )}
+
+                {openMenu === "categories" && (
+                  <div>
+                    <span aria-hidden className={MENU_TITLE_RULE} />
+                    <p className="font-display text-xl leading-none text-zoa-slate">Categorías</p>
+                    <ul className="m-0 mt-5 grid list-none grid-cols-1 border-t border-zoa-line p-0 md:grid-cols-3">
+                      <li className="list-none border-b border-zoa-line pr-6">
+                        <Link href="/tienda" onClick={closeAll} className={MEGA_LINK}>
+                          Ver todo
+                        </Link>
+                      </li>
+                      {CATEGORIES.map((cat, i) => (
+                        <li
+                          key={cat}
+                          className={`list-none border-b border-zoa-line ${(i + 1) % 3 !== 2 ? "pr-6" : ""}`}
+                        >
+                          <Link
+                            href={`/tienda?categoria=${encodeURIComponent(cat)}`}
+                            onClick={closeAll}
+                            className={MEGA_LINK}
+                          >
+                            {cat}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button variant="link-arrow" href="/tienda" onClick={closeAll} className="mt-6">
+                      Ver todos los productos
+                    </Button>
+                  </div>
+                )}
+
+                {openMenu === "shop" && (
+                  <div className="grid grid-cols-1 gap-10 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    {/* Enlaces de tienda en 2 columnas */}
+                    <div>
+                      <span aria-hidden className={MENU_TITLE_RULE} />
+                      <p className="font-display text-xl leading-none text-zoa-slate">Tienda</p>
+                      <ul className="m-0 mt-5 grid list-none grid-cols-1 border-t border-zoa-line p-0 sm:grid-cols-2 sm:gap-x-6">
+                        {SHOP_LINKS.map((link) => (
+                          <li key={link.href} className="list-none">
+                            {link.external ? (
+                              <a
+                                href={link.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={closeAll}
+                                className={MEGA_LINK}
+                              >
+                                {link.label}
+                              </a>
+                            ) : (
+                              <Link href={link.href} onClick={closeAll} className={MEGA_LINK}>
+                                {link.label}
+                              </Link>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Atención personalizada (solo xl) */}
+                    <div className="hidden xl:block">
+                      <span aria-hidden className={MENU_TITLE_RULE} />
+                      <p className="font-display text-xl leading-none text-zoa-slate">Atención personalizada</p>
+                      <div className="mt-5 flex flex-col gap-3 font-sans text-[13px] text-zoa-slate">
+                        <a
+                          href="https://wa.me/525521068191"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={closeAll}
+                          className="link-underline inline-flex w-fit items-center gap-2"
+                        >
+                          WhatsApp +52 55 2106 8191
+                        </a>
+                        <a
+                          href="tel:5521068191"
+                          onClick={closeAll}
+                          className="link-underline inline-flex w-fit items-center gap-2"
+                        >
+                          <Phone size={13} strokeWidth={1.4} aria-hidden />
+                          55 2106 8191
+                        </a>
+                        <a
+                          href="https://instagram.com/zoa.mx"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={closeAll}
+                          className="link-underline inline-flex w-fit items-center gap-2"
+                        >
+                          <Instagram size={13} strokeWidth={1.4} aria-hidden />
+                          @zoa.mx
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -508,9 +539,9 @@ export default function Navbar() {
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
-              initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+              initial={rm ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+              exit={rm ? { opacity: 1 } : { opacity: 0 }}
               transition={{ duration: 0.25, ease: EASE }}
               className="fixed inset-0 z-[60] flex flex-col bg-zoa-surface md:hidden"
             >
@@ -531,13 +562,13 @@ export default function Navbar() {
 
               {/* Contenido scrollable */}
               <motion.div
-                variants={reduceMotion ? undefined : drawerList}
-                initial={reduceMotion ? false : "hidden"}
-                animate={reduceMotion ? undefined : "show"}
+                variants={rm ? undefined : drawerList}
+                initial={rm ? false : "hidden"}
+                animate={rm ? undefined : "show"}
                 className="flex-1 overflow-y-auto overscroll-contain"
               >
                 {/* Búsqueda */}
-                <motion.div variants={reduceMotion ? undefined : drawerItem} className="hairline-b px-5 py-5">
+                <motion.div variants={rm ? undefined : drawerItem} className="hairline-b px-5 py-5">
                   <form onSubmit={handleSearch} className="flex items-center gap-2 border border-zoa-line-strong px-3 py-2">
                     <Search size={14} className="shrink-0 text-zoa-slate-60" aria-hidden />
                     <input
@@ -558,50 +589,23 @@ export default function Navbar() {
                   </form>
                 </motion.div>
 
-                {/* Enlaces principales — 01…04 */}
+                {/* Enlace principal — 01 Inicio */}
                 <ul className="m-0 list-none p-0">
-                  {[
-                    { href: "/", label: "Inicio", external: false },
-                    { href: "/tienda", label: "Tienda", external: false },
-                    { href: "/blog", label: "Blog", external: false },
-                    { href: "https://tracking.skydropx.com/es-MX/page/zoa", label: "Rastrear envío", external: true },
-                  ].map((link, i) => (
-                    <motion.li
-                      key={link.href}
-                      variants={reduceMotion ? undefined : drawerItem}
-                      className="hairline-b list-none"
+                  <motion.li variants={rm ? undefined : drawerItem} className="hairline-b list-none">
+                    <Link
+                      href="/"
+                      onClick={closeAll}
+                      className="flex items-baseline gap-4 px-5 py-5 font-sans text-2xl font-light tracking-[-0.02em] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                     >
-                      {link.external ? (
-                        <a
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={closeAll}
-                          className="flex items-baseline gap-4 px-5 py-5 font-sans text-2xl font-light tracking-[-0.02em] text-zoa-slate transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate"
-                        >
-                          <span className="font-sans text-[10px] tracking-[0.2em] text-zoa-slate-60 tabular">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          {link.label}
-                        </a>
-                      ) : (
-                        <Link
-                          href={link.href}
-                          onClick={closeAll}
-                          className="flex items-baseline gap-4 px-5 py-5 font-sans text-2xl font-light tracking-[-0.02em] text-zoa-slate transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate"
-                        >
-                          <span className="font-sans text-[10px] tracking-[0.2em] text-zoa-slate-60 tabular">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          {link.label}
-                        </Link>
-                      )}
-                    </motion.li>
-                  ))}
+                      <span className="font-sans text-[10px] tracking-[0.2em] text-zoa-forest tabular">01</span>
+                      Inicio
+                    </Link>
+                  </motion.li>
                 </ul>
 
                 {/* Colecciones */}
-                <motion.div variants={reduceMotion ? undefined : drawerItem} className="px-5 pt-8">
+                <motion.div variants={rm ? undefined : drawerItem} className="px-5 pt-8">
+                  <span aria-hidden className={MENU_TITLE_RULE} />
                   <p className="font-display text-lg leading-none text-zoa-slate">Colecciones</p>
                   <ul className="m-0 mt-3 list-none border-t border-zoa-line p-0">
                     {COLLECTIONS.map((c, i) => (
@@ -609,10 +613,10 @@ export default function Navbar() {
                         <Link
                           href={`/tienda?coleccion=${encodeURIComponent(c.slug)}`}
                           onClick={closeAll}
-                          className="flex min-h-11 items-center justify-between py-3 font-sans text-[14px] text-zoa-slate"
+                          className="flex min-h-11 items-center justify-between py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest"
                         >
                           {c.label}
-                          <span className="font-sans text-[10px] tracking-[0.16em] text-zoa-slate-60 tabular">
+                          <span className="font-sans text-[10px] tracking-[0.16em] text-zoa-forest tabular">
                             {String(i + 1).padStart(2, "0")}
                           </span>
                         </Link>
@@ -622,11 +626,12 @@ export default function Navbar() {
                 </motion.div>
 
                 {/* Categorías */}
-                <motion.div variants={reduceMotion ? undefined : drawerItem} className="px-5 pt-8">
+                <motion.div variants={rm ? undefined : drawerItem} className="px-5 pt-8">
+                  <span aria-hidden className={MENU_TITLE_RULE} />
                   <p className="font-display text-lg leading-none text-zoa-slate">Categorías</p>
                   <ul className="m-0 mt-3 grid list-none grid-cols-2 border-t border-zoa-line p-0">
                     <li className="list-none border-b border-zoa-line pr-4">
-                      <Link href="/tienda" onClick={closeAll} className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate">
+                      <Link href="/tienda" onClick={closeAll} className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest">
                         Ver todo
                       </Link>
                     </li>
@@ -635,7 +640,7 @@ export default function Navbar() {
                         <Link
                           href={`/tienda?categoria=${encodeURIComponent(cat)}`}
                           onClick={closeAll}
-                          className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate"
+                          className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest"
                         >
                           {cat}
                         </Link>
@@ -644,8 +649,39 @@ export default function Navbar() {
                   </ul>
                 </motion.div>
 
+                {/* Tienda */}
+                <motion.div variants={rm ? undefined : drawerItem} className="px-5 pt-8">
+                  <span aria-hidden className={MENU_TITLE_RULE} />
+                  <p className="font-display text-lg leading-none text-zoa-slate">Tienda</p>
+                  <ul className="m-0 mt-3 list-none border-t border-zoa-line p-0">
+                    {SHOP_LINKS.map((link) => (
+                      <li key={link.href} className="list-none border-b border-zoa-line">
+                        {link.external ? (
+                          <a
+                            href={link.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={closeAll}
+                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
+                          >
+                            {link.label}
+                          </a>
+                        ) : (
+                          <Link
+                            href={link.href}
+                            onClick={closeAll}
+                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
+                          >
+                            {link.label}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+
                 {/* Contacto y redes */}
-                <motion.div variants={reduceMotion ? undefined : drawerItem} className="hairline-t mt-10 bg-zoa-sand/60 px-5 py-7">
+                <motion.div variants={rm ? undefined : drawerItem} className="hairline-t mt-10 bg-zoa-sand/60 px-5 py-7">
                   <p className="overline">Atención personalizada</p>
                   <div className="mt-4 flex flex-col gap-3 font-sans text-[13px] text-zoa-slate">
                     <a

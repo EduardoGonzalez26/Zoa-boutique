@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 
-type ChipVariant = "sand" | "outline" | "inverse";
+type ChipVariant = "sand" | "outline" | "inverse" | "forest";
 
 interface ChipProps {
   children: ReactNode;
@@ -17,11 +17,14 @@ const VARIANT: Record<ChipVariant, string> = {
   sand: "bg-zoa-sand text-zoa-slate hairline hover:bg-zoa-slate/10",
   outline: "bg-transparent text-zoa-slate hairline hover:bg-zoa-slate/5",
   inverse: "bg-transparent text-zoa-surface hairline-inverse hover:bg-zoa-surface/10",
+  /* v4.1 · Chip activo de filtros: forest relleno + tinta off-white */
+  forest: "bg-zoa-forest text-zoa-surface hover:bg-zoa-forest-dark",
 };
 
 /**
  * Chip de filtro / etiqueta editorial. Radio 2px, micro-label, sin relleno decorativo.
  * Con `onRemove` se convierte en un botón interactivo (touch target ≥ 44px de alto en móvil).
+ * La variante `forest` marca el filtro activo (fondo forest + tinta off-white).
  */
 export default function Chip({
   children,
@@ -47,7 +50,11 @@ export default function Chip({
       type="button"
       onClick={onRemove}
       className={`${base} ${VARIANT[variant]} group cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent ${
-        variant === "inverse" ? "focus-visible:ring-zoa-surface" : "focus-visible:ring-zoa-slate"
+        variant === "inverse"
+          ? "focus-visible:ring-zoa-surface"
+          : variant === "forest"
+            ? "focus-visible:ring-zoa-forest"
+            : "focus-visible:ring-zoa-slate"
       } ${className}`}
     >
       {leading}

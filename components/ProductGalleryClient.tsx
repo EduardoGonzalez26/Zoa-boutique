@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ShoppingBag, ChevronLeft, ChevronRight as ChevronRightIcon, Shield, CreditCard, Lock, Zap, ArrowLeft, X } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import useMounted from "@/components/ui/useMounted";
 import type { Product, Size } from "@/lib/types";
 import ProductReviews from "@/components/ProductReviews";
 import Accordion, { type AccordionEntry } from "@/components/ui/Accordion";
@@ -49,6 +50,8 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
   const { addItem, openCart, openCartAtCheckout } = useCartStore();
   const router = useRouter();
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  const rm = mounted && reduceMotion;
 
   const images = product.images.length > 0 ? product.images : ["/placeholder.jpg"];
 
@@ -278,7 +281,7 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
                   { icon: <CreditCard size={20} strokeWidth={1.4} aria-hidden />, text: "Aceptamos todas las tarjetas" },
                 ].map(({ icon, text }) => (
                   <div key={text} className="flex flex-col items-start gap-3">
-                    <span className="text-zoa-slate">{icon}</span>
+                    <span className="text-zoa-forest">{icon}</span>
                     <p className="font-sans text-[10px] uppercase leading-snug tracking-[0.14em] text-zoa-slate-60">
                       {text}
                     </p>
@@ -298,10 +301,10 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
 
       {/* ══ BARRA STICKY INFERIOR (móvil) ══ */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-zoa-line bg-zoa-sand/95 backdrop-blur-md transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-40 border-t border-zoa-forest-35 bg-zoa-sand/95 backdrop-blur-md transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] lg:hidden ${
           barVisible ? "translate-y-0" : "translate-y-full"
         }`}
-        style={reduceMotion ? { transition: "none" } : undefined}
+        style={rm ? { transition: "none" } : undefined}
         aria-hidden={!barVisible}
       >
         <div className="flex items-center gap-4 px-5 py-3">
@@ -598,7 +601,7 @@ function ProductFormSection({
                 className={`relative h-12 w-12 border font-sans text-[13px] tracking-wider transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-1
                   ${available
                     ? selected
-                      ? "cursor-pointer border-zoa-slate bg-zoa-slate text-zoa-sand"
+                      ? "cursor-pointer border-zoa-forest bg-zoa-forest text-zoa-surface"
                       : "cursor-pointer border-zoa-line-strong text-zoa-slate hover:border-zoa-slate"
                     : "cursor-not-allowed border-zoa-line text-zoa-slate-60/60"
                   }`}
@@ -615,6 +618,12 @@ function ProductFormSection({
             );
           })}
         </div>
+        {/* Indicador de stock: disponible en forest · últimas piezas en vino */}
+        {selectedSize && product.stock[selectedSize] > 2 && (
+          <p className="font-display text-[13px] italic text-zoa-forest">
+            Disponible
+          </p>
+        )}
         {selectedSize && product.stock[selectedSize] > 0 && product.stock[selectedSize] <= 2 && (
           <p className="font-display text-[13px] italic text-zoa-wine">
             Últimas {product.stock[selectedSize]} {product.stock[selectedSize] === 1 ? "pieza" : "piezas"}!
@@ -640,7 +649,7 @@ function ProductFormSection({
           <motion.button
             onClick={handleBuyNow}
             whileTap={{ scale: 0.99 }}
-            className="flex h-14 w-full cursor-pointer items-center justify-center gap-3 border border-zoa-line-strong font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
+            className="flex h-14 w-full cursor-pointer items-center justify-center gap-3 border border-zoa-forest-35 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-forest transition-[background-color,border-color,color] duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
           >
             <Zap size={14} strokeWidth={1.5} aria-hidden />
             Comprar ahora

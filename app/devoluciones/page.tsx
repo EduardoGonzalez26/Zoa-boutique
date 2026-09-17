@@ -6,14 +6,14 @@ export const metadata: Metadata = {
   description: "Política de cambios y devoluciones de Zoa — moda femenina en México.",
 };
 
-const legalLink = "font-medium text-zoa-slate underline decoration-zoa-slate decoration-2 underline-offset-2 transition-colors hover:decoration-zoa-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate";
+const legalLink = "font-medium text-zoa-slate underline decoration-zoa-slate decoration-2 underline-offset-2 transition-colors hover:text-zoa-forest hover:decoration-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate";
 
 export default function DevolucionesPage() {
   return (
     <div className="min-h-screen bg-zoa-sand pt-28 pb-20">
       <div className="mx-auto w-full max-w-[70ch] px-5 md:px-0">
         <div className="hairline-b mb-10 pt-10 pb-8">
-          <p className="overline">Legal</p>
+          <p className="overline-forest">Legal</p>
           <h1 className="mt-5 text-balance font-display text-[clamp(2rem,4.5vw,3.25rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             Cambios y Devoluciones
           </h1>
@@ -92,7 +92,7 @@ export default function DevolucionesPage() {
         </div>
 
         <div className="mt-14 border-t border-zoa-line pt-8">
-          <Link href="/" className="cursor-pointer font-sans text-xs tracking-wide text-zoa-slate-60 transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
+          <Link href="/" className="cursor-pointer font-sans text-xs tracking-wide text-zoa-slate-60 transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
             ← Volver a la tienda
           </Link>
         </div>

@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import useMounted from "@/components/ui/useMounted";
 
 export interface AccordionEntry {
   id: string;
@@ -35,6 +36,10 @@ export default function Accordion({
 }: AccordionProps) {
   const [openIds, setOpenIds] = useState<string[]>(defaultOpenId ? [defaultOpenId] : []);
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  // Los paneles no existen en SSR (defaultOpenId sí puede abrir uno): `rm`
+  // garantiza que initial/exit no difieran antes de montar.
+  const rm = mounted && reduceMotion;
   const inverse = tone === "inverse";
 
   const toggle = (id: string) => {
@@ -66,7 +71,9 @@ export default function Accordion({
                 size={13}
                 strokeWidth={1.5}
                 aria-hidden
-                className={`shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? "rotate-180" : ""}`}
+                className={`shrink-0 transition-[transform,color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                  isOpen ? "rotate-180" : ""
+                } ${isOpen && !inverse ? "text-zoa-forest" : ""}`}
               />
             </button>
 
@@ -75,9 +82,9 @@ export default function Accordion({
                 <motion.div
                   key={item.id}
                   id={`acc-${item.id}`}
-                  initial={reduceMotion ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+                  initial={rm ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
-                  exit={reduceMotion ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+                  exit={rm ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
                   transition={{ duration: 0.32, ease: EASE }}
                   style={{ overflow: "hidden" }}
                 >

@@ -29,7 +29,7 @@ const EMPTY_ADDRESS: ShippingAddress = {
 const INPUT_CLS =
   "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3.5 py-3 font-sans text-[13px] text-zoa-slate transition-colors placeholder:text-zoa-slate-60/60 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
 
-const OVERLINE = "overline";
+const OVERLINE = "overline-forest";
 
 export default function CheckoutPage() {
   const router = useRouter();

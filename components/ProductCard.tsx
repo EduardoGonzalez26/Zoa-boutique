@@ -121,16 +121,22 @@ export default function ProductCard({
             </span>
           )}
 
-          {/* Badge AGOTADO / NUEVO — texto slate + hairline, sin relleno */}
+          {/* Badge AGOTADO (slate) / NUEVO (forest) — hairline, sin relleno */}
           {badge && (
-            <span className="absolute left-3 top-3 z-20 border border-zoa-line-strong px-2.5 py-1 font-sans text-[9px] uppercase tracking-[0.2em] text-zoa-slate">
+            <span
+              className={`absolute left-3 top-3 z-20 border px-2.5 py-1 font-sans text-[9px] uppercase tracking-[0.2em] ${
+                isAgotado
+                  ? "border-zoa-line-strong text-zoa-slate"
+                  : "border-zoa-forest-35 text-zoa-forest"
+              }`}
+            >
               {badge}
             </span>
           )}
 
           {/* Marquesina "VER PRODUCTO" — solo CSS hover */}
           <div className="product-card-cta pointer-events-none absolute inset-x-0 bottom-0 z-20 translate-y-full border-t border-zoa-line bg-[rgba(234,233,229,0.94)] py-3 text-center transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0">
-            <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate">
+            <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-forest">
               Ver producto
             </span>
           </div>
@@ -182,7 +188,7 @@ export default function ProductCard({
                 <span
                   key={size}
                   className={`font-sans text-[9px] uppercase tracking-[0.14em] ${
-                    available ? "text-zoa-slate-60" : "text-zoa-slate-60 line-through opacity-40"
+                    available ? "text-zoa-forest" : "text-zoa-slate-60 line-through opacity-40"
                   }`}
                 >
                   {size}

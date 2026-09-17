@@ -182,9 +182,9 @@ export default function CartDrawer() {
             style={{ maxHeight: "95svh" }}
           >
 
-            {/* Drag handle (móvil) */}
+            {/* Drag handle (móvil) — hairline forest al 35% */}
             <div aria-hidden className="flex flex-none justify-center pt-3 md:hidden">
-              <span className="h-px w-12 bg-zoa-line-strong" />
+              <span className="h-px w-12 bg-zoa-forest-35" />
             </div>
 
             {/* ── Header ── */}
@@ -198,7 +198,15 @@ export default function CartDrawer() {
                   </button>
                 ) : (
                   <Overline>
-                    Tu bolsa{itemCountTotal > 0 ? ` · ${itemCountTotal} ${itemCountTotal === 1 ? "pieza" : "piezas"}` : ""}
+                    Tu bolsa
+                    {itemCountTotal > 0 && (
+                      <>
+                        {" · "}
+                        <span className="tabular text-zoa-forest">
+                          {itemCountTotal} {itemCountTotal === 1 ? "pieza" : "piezas"}
+                        </span>
+                      </>
+                    )}
                   </Overline>
                 )}
                 <h2 className="font-display text-2xl leading-none tracking-[-0.02em] text-zoa-slate">
@@ -219,7 +227,7 @@ export default function CartDrawer() {
                     {items.length === 0 ? (
                       <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         className="flex h-56 flex-col items-center justify-center gap-4 text-zoa-slate-60">
-                        <ShoppingBag size={32} strokeWidth={1} aria-hidden />
+                        <ShoppingBag size={32} strokeWidth={1} aria-hidden className="text-zoa-forest" />
                         <p className="font-display text-xl italic text-zoa-slate">Tu bolsa está vacía</p>
                         <button
                           onClick={handleClose}

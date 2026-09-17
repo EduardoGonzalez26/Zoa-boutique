@@ -1,4 +1,4 @@
-# Producto (PDP) — overrides v4
+# Producto (PDP) — overrides v4.3
 
 > Referencia: `MASTER.md` §6.3. Sin desviaciones de ley; se documentan las particularidades verificadas de `ProductGalleryClient.tsx` y `app/product/[id]/page.tsx`.
 
@@ -7,8 +7,8 @@
 - Grid 12: galería 7 / panel de información 5 (sticky en desktop).
 - **Móvil**: slider scroll-snap 4/5, flechas 44px, contador `01 / N`, indicadores hairline.
 - **Desktop**: raíl de miniaturas sticky `top-28` (80px; activa con borde slate) + `ImageReveal` principal 4/5 con contador overlay y zoom hover 1.03.
-- Panel: overline de categoría, H1 Display 2, precio, leyenda wine italic, SKU/marca/guía/compartir (44px), swatches (círculos semánticos), tallas 48px con diagonal en agotadas, CTA forest full-width + `outline` "Comprar ahora", fila de confianza, `Accordion` (descripción abierta por defecto), reseñas, cross-sell scroll horizontal.
-- **Barra sticky inferior móvil**: aparece con `scrollY > 420`; aplica `body.zoa-hide-fab` (retira el FAB de WhatsApp) y sincroniza `aria-hidden`/`tabIndex`. No cambiar el umbral ni el mecanismo.
+- Panel: overline de categoría, H1 Display 2, precio, leyenda wine italic, SKU/marca/guía/compartir (44px), swatches (círculos semánticos, anillo activo **slate**), tallas 48px con diagonal en agotadas y **seleccionada con fondo forest + tinta off-white**, indicador de stock **"Disponible" en itálica Bodoni forest** (stock >2) / **"Últimas X piezas!" en itálica wine** (stock ≤2), CTA forest full-width + **`outline` forest "Comprar ahora"**, fila de confianza con **íconos forest**, `Accordion` (chevron que **se pinta forest al abrir**), reseñas, cross-sell scroll horizontal.
+- **Barra sticky inferior móvil**: aparece con `scrollY > 420`, **hairline superior `forest-35`** y CTA forest; aplica `body.zoa-hide-fab` (retira el FAB de WhatsApp) y sincroniza `aria-hidden`/`tabIndex`. No cambiar el umbral ni el mecanismo.
 - Modal guía de tallas: backdrop `slate/50` + blur, panel hairline `shadow-card` (excepción de sombra permitida), iframe del artículo de tallas.
 
 ## Excepciones / notas
@@ -16,3 +16,5 @@
 - **Sin enlace flotante "Catálogo"**: retirado a propósito en v4; no reintroducir.
 - `data-product-name` en el contenedor de página alimenta el mensaje contextual del FAB de WhatsApp; conservar.
 - La columna de galería no usa `.container-zoa` en móvil (a sangre); en desktop usa `lg:px-10 xl:px-20` equivalente al gutter maestro.
+- Los swatches de color y las miniaturas activas siguen en slate: el forest no entra en swatches ni en la retícula de la galería (regla §1.5 del MASTER).
+- **Hidratación (v4.3)**: la barra sticky móvil desactiva su transición con `rm` (`style={rm ? { transition: "none" } : undefined}`); el primer render conserva la transición CSS idéntica al SSR y el apagado RM entra post-mount (§8.1 del MASTER).

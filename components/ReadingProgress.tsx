@@ -2,6 +2,7 @@
 
 import { useRef, type ReactNode } from "react";
 import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
+import useMounted from "@/components/ui/useMounted";
 
 /**
  * Barra de progreso de lectura de 1px forest, anclada (sticky) bajo el navbar.
@@ -10,6 +11,8 @@ import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
 export default function ReadingProgress({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  const rm = mounted && reduceMotion;
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start 0.85", "end 0.4"],
@@ -17,13 +20,14 @@ export default function ReadingProgress({ children }: { children: ReactNode }) {
   const scaleX = useSpring(scrollYProgress, { stiffness: 180, damping: 30, restDelta: 0.001 });
 
   return (
-    <div ref={ref}>
+    // `relative` — el contenedor de `useScroll` debe ser no estático (lo pide framer).
+    <div ref={ref} className="relative">
       <div
         aria-hidden
         className="sticky top-16 z-30 -mx-5 h-px bg-zoa-line md:top-20 md:-mx-8"
       >
         <motion.span
-          style={{ scaleX: reduceMotion ? 1 : scaleX }}
+          style={{ scaleX: rm ? 1 : scaleX }}
           className="block h-px origin-left bg-zoa-forest"
         />
       </div>

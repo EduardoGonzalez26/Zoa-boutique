@@ -65,18 +65,20 @@ function ProductCarousel({
           title={title}
           action={seeAllHref ? { label: "Ver todo", href: seeAllHref } : undefined}
         />
-      </div>
 
-      {/* Carrusel horizontal nativo */}
-      <div className="carousel-wrap pt-10">
-        {/* Spacer que replica el gutter de .container-zoa */}
-        <div aria-hidden className="w-5 shrink-0 md:w-10 xl:w-20" />
-        {products.map((product, i) => (
-          <div key={product.id} className="carousel-item w-[155px] shrink-0 sm:w-[195px] md:w-[240px] lg:w-[220px]">
-            <ProductCard product={product} index={i + 1} />
-          </div>
-        ))}
-        <div aria-hidden className="w-5 shrink-0 md:w-10 xl:w-20" />
+        {/* Carrusel horizontal nativo — dentro del wrapper: hereda max-width y gutter */}
+        <div
+          className="carousel-wrap pt-10"
+          tabIndex={0}
+          role="region"
+          aria-label={`${title} — desplazable horizontalmente`}
+        >
+          {products.map((product, i) => (
+            <div key={product.id} className="carousel-item w-[155px] shrink-0 sm:w-[195px] md:w-[240px] lg:w-[220px]">
+              <ProductCard product={product} index={i + 1} />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -146,8 +148,9 @@ export default async function HomePage() {
       {/* ══ 1 · HERO ══ */}
       <HeroSection />
 
-      {/* ══ 2 · BANDA SLATE (fina) ══ */}
-      <Marquee variant="slate" />
+      {/* ══ 2 · BANDA FOREST (fina) — única banda forest full-bleed de la home;
+          el CTABanner de esta página queda slate (1 banda forest por página) ══ */}
+      <Marquee variant="forest" />
 
       {/* ══ 3 · INTRO EDITORIAL — statement + métricas ══ */}
       <section className="container-zoa pt-[var(--space-section)]">
@@ -182,7 +185,7 @@ export default async function HomePage() {
                 i > 0 ? "sm:border-l sm:pl-8" : "sm:pr-8"
               } ${i === 1 ? "sm:pr-8" : ""}`}
             >
-              <p className="font-display text-[clamp(2.5rem,6vw,5rem)] font-normal leading-[0.9] tracking-[-0.02em] text-zoa-slate tabular">
+              <p className="font-display text-[clamp(2.5rem,6vw,5rem)] font-normal leading-[0.9] tracking-[-0.02em] text-zoa-forest tabular">
                 {metric.value}
               </p>
               <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate-60">
@@ -390,7 +393,7 @@ export default async function HomePage() {
                 i > 0 ? "md:border-l md:pl-10" : "md:pr-10"
               } ${i === 1 ? "md:pr-10" : ""}`}
             >
-              <Icon size={20} strokeWidth={1.4} aria-hidden className="text-zoa-slate" />
+              <Icon size={20} strokeWidth={1.4} aria-hidden className="text-zoa-forest" />
               <div>
                 <p className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate">
                   {label}

@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { ArrowDown } from "lucide-react";
 import Button from "@/components/ui/Button";
+import useMounted from "@/components/ui/useMounted";
 
 // ── Clips de portada (Cloudinary · MP4 H.264 progresivo, sin f_auto) ───────
 // Cloud name activo: `ppo6ze2s`. Las transformaciones ya entregan ~2.83/3.18 MB
@@ -33,6 +34,9 @@ const BRIDGE = ["Envíos a todo México", "Pago seguro", "Cambios hasta 7 días"
 
 export default function HeroSection() {
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  // Primer render del cliente = SSR (rm=false); el poster RM entra tras montar.
+  const rm = mounted && reduceMotion;
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([null, null]);
@@ -52,7 +56,7 @@ export default function HeroSection() {
   const crossfadeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (reduceMotion) return;
+    if (rm) return;
 
     const videos = videoRefs.current;
     const section = sectionRef.current;
@@ -231,7 +235,7 @@ export default function HeroSection() {
       switchingRef.current = false;
       incomingRef.current = null;
     };
-  }, [reduceMotion]);
+  }, [rm]);
 
   const container = {
     hidden: {},
@@ -245,12 +249,12 @@ export default function HeroSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex h-[86vh] max-h-[940px] min-h-[600px] w-full flex-col overflow-hidden bg-zoa-slate"
+      className="relative flex h-[86vh] max-h-[940px] min-h-[640px] w-full flex-col overflow-hidden bg-zoa-slate"
     >
 
       {/* ── Fondo: dos clips Cloudinary en secuencia + dos capas alfa del MISMO slate ── */}
       <div aria-hidden="true" className="absolute inset-0 z-0">
-        {reduceMotion ? (
+        {rm ? (
           <Image
             src={HERO_CLIPS[0].poster}
             alt="Zoa — moda femenina de colección"
@@ -322,7 +326,7 @@ export default function HeroSection() {
 
       {/* ── Raíl vertical izquierdo ── */}
       <motion.div
-        initial={reduceMotion ? false : { opacity: 0 }}
+        initial={rm ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.9, delay: 0.5, ease: EASE }}
         className="absolute left-1.5 top-1/2 z-10 hidden -translate-y-1/2 items-center gap-3 md:flex xl:left-8"
@@ -335,11 +339,11 @@ export default function HeroSection() {
       </motion.div>
 
       {/* ── Composición asimétrica: titular XL abajo-izquierda / copy abajo-derecha ── */}
-      <div className="relative z-10 flex flex-1 items-end pt-32">
-        <div className="container-zoa w-full pb-10 md:pb-16">
+      <div className="relative z-10 flex flex-1 items-end pt-[clamp(4.5rem,11vh,8rem)]">
+        <div className="container-zoa w-full pb-16 md:pb-24">
           <motion.div
             variants={container}
-            initial={reduceMotion ? false : "hidden"}
+            initial={rm ? false : "hidden"}
             animate="show"
             className="grid grid-cols-1 gap-x-10 gap-y-8 md:grid-cols-12 md:items-end"
           >
@@ -348,7 +352,7 @@ export default function HeroSection() {
               <motion.div variants={item} aria-hidden className="h-px w-full bg-zoa-line-inverse" />
               <motion.h1
                 variants={item}
-                className="mt-6 text-balance font-sans text-[clamp(3rem,11vw,9.5rem)] font-light uppercase leading-[0.86] tracking-[-0.035em] text-zoa-surface"
+                className="mt-6 text-balance font-sans text-[clamp(2.75rem,min(11vw,13.5vh),9.5rem)] font-light uppercase leading-[0.86] tracking-[-0.035em] text-zoa-surface"
               >
                 Destaca
                 <br />
@@ -361,8 +365,9 @@ export default function HeroSection() {
               <p className="max-w-sm font-sans text-[clamp(1rem,1.35vw,1.3rem)] leading-[1.6] text-zoa-slate-inverse-60">
                 Piezas diseñadas para mujeres que marcan tendencia. Editorial, atemporal, hecha para ti.
               </p>
-              <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-                <Button href="/tienda" variant="primary">
+              <div className="mt-8 mb-2 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center md:mb-0">
+                {/* Foco sobre video: anillo off-white explícito (nunca forest sobre foto/video) */}
+                <Button href="/tienda" variant="primary" className="focus-visible:ring-zoa-surface!">
                   Ver productos
                 </Button>
                 <Button href="#colecciones" variant="ghost-inverse">
@@ -376,7 +381,7 @@ export default function HeroSection() {
 
       {/* ── Indicador de scroll hairline ── */}
       <motion.div
-        initial={reduceMotion ? false : { opacity: 0 }}
+        initial={rm ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.1, duration: 0.6, ease: EASE }}
         className="absolute bottom-[5.5rem] right-5 z-10 hidden items-center gap-3 md:flex xl:right-8"
@@ -395,7 +400,7 @@ export default function HeroSection() {
             {BRIDGE.map((label, i) => (
               <li
                 key={label}
-                className={`flex min-h-14 list-none items-center gap-3 border-t border-zoa-line-inverse py-3 first:border-t-0 sm:border-t-0 sm:py-0 ${
+                className={`flex min-h-11 list-none items-center gap-3 border-t border-zoa-line-inverse py-2 first:border-t-0 sm:min-h-14 sm:border-t-0 sm:py-0 ${
                   i > 0 ? "sm:border-l sm:border-zoa-line-inverse sm:pl-6" : ""
                 }`}
               >

@@ -10,7 +10,7 @@ export default function CheckoutFailurePage() {
       <div className="w-full max-w-md">
         <div className="hairline flex flex-col items-center gap-6 px-8 py-14 text-center">
           <XCircle size={48} strokeWidth={1.1} aria-hidden className="text-zoa-wine" />
-          <p className="overline">Pago no procesado</p>
+          <p className="overline-forest">Pago no procesado</p>
           <h1 className="text-balance font-display text-[clamp(2rem,4.5vw,3.25rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             Algo salió mal
           </h1>

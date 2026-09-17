@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import useMounted from "@/components/ui/useMounted";
 
 export interface CollectionRow {
   label: string;
@@ -24,6 +25,8 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 export default function CollectionIndex({ items }: { items: CollectionRow[] }) {
   const [active, setActive] = useState(0);
   const reduceMotion = useReducedMotion();
+  const mounted = useMounted();
+  const rm = mounted && reduceMotion;
 
   if (!items.length) return null;
 
@@ -39,11 +42,18 @@ export default function CollectionIndex({ items }: { items: CollectionRow[] }) {
                 href={item.href}
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
-                className="group flex cursor-pointer items-center gap-5 px-1 py-6 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate md:py-8"
+                className="group relative flex cursor-pointer items-center gap-5 px-1 py-6 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate md:py-8"
               >
+                {/* v4.1 · Barra de fila activa: forest 2px */}
                 <span
-                  className={`w-9 shrink-0 font-sans text-[11px] tracking-[0.2em] text-zoa-slate-60 tabular transition-all duration-200 ${
-                    isActive ? "font-display text-[15px] not-italic tracking-normal text-zoa-slate" : ""
+                  aria-hidden
+                  className={`absolute left-0 top-1/2 h-8 w-0.5 -translate-y-1/2 bg-zoa-forest transition-opacity duration-200 ${
+                    isActive ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+                <span
+                  className={`w-9 shrink-0 font-sans text-[11px] tracking-[0.2em] text-zoa-forest tabular transition-all duration-200 ${
+                    isActive ? "font-display text-[15px] italic tracking-normal text-zoa-forest" : ""
                   }`}
                 >
                   {String(i + 1).padStart(2, "0")}
@@ -82,7 +92,7 @@ export default function CollectionIndex({ items }: { items: CollectionRow[] }) {
                 className="absolute inset-0"
                 initial={false}
                 animate={{ opacity: i === active ? 1 : 0 }}
-                transition={{ duration: reduceMotion ? 0 : 0.7, ease: EASE }}
+                transition={{ duration: rm ? 0 : 0.7, ease: EASE }}
                 aria-hidden={i !== active}
               >
                 <Image
@@ -100,9 +110,9 @@ export default function CollectionIndex({ items }: { items: CollectionRow[] }) {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={items[active]?.slug}
-                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                  initial={rm ? false : { opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+                  exit={rm ? undefined : { opacity: 0, y: -6 }}
                   transition={{ duration: 0.3, ease: EASE }}
                   className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate"
                 >

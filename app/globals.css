@@ -8,6 +8,10 @@
    ══════════════════════════════════════════════════════════════ */
 @import "tailwindcss";
 
+/* `position: relative` en el scroller raíz: framer-motion mide `useScroll({target})`
+   contra `document.scrollingElement` y exige que el contenedor no sea estático. */
+html { position: relative; }
+
 /* ──────────────────────────────────────────────────────────────
    TOKENS
    ────────────────────────────────────────────────────────────── */
@@ -23,6 +27,11 @@
   --color-zoa-line-strong:  rgba(43, 60, 66, 0.35);
   --color-zoa-forest:       #003628;
   --color-zoa-forest-dark:  #00251B;
+  /* v4.1 · Alfa de forest (acentos: hovers, bordes, numerales, focus) */
+  --color-zoa-forest-08:    rgba(0, 54, 40, 0.08);
+  --color-zoa-forest-16:    rgba(0, 54, 40, 0.16);
+  --color-zoa-forest-35:    rgba(0, 54, 40, 0.35);
+  --color-zoa-forest-60:    rgba(0, 54, 40, 0.62);
   --color-zoa-surface:      #FFF7F5;
   --color-zoa-wine:         #420D0D;
   --color-zoa-success:      #003628;
@@ -101,7 +110,7 @@ button, input, textarea, select {
 }
 
 ::selection {
-  background-color: rgba(43, 60, 66, 0.15);
+  background-color: rgba(0, 54, 40, 0.14);
   color: var(--color-zoa-slate);
 }
 
@@ -111,9 +120,11 @@ button, input, textarea, select {
 ::-webkit-scrollbar-thumb { background: var(--color-zoa-slate-60); }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-zoa-slate); }
 
-/* Anillo de foco global (slate) */
+/* Anillo de foco global (forest — v4.1 acción).
+   Sobre bandas oscuras (slate / wine / foto / video) los interactivos
+   conservan su anillo off-white explícito: el forest nunca va sobre oscuro. */
 :focus-visible {
-  outline: 2px solid var(--color-zoa-slate);
+  outline: 2px solid var(--color-zoa-forest);
   outline-offset: 2px;
 }
 
@@ -170,19 +181,13 @@ button, input, textarea, select {
   -webkit-overflow-scrolling: touch;
   touch-action: auto;
   scroll-snap-type: x proximity;
-  scroll-padding-left: 1.25rem;  /* mobile: matches spacer w-5 */
 }
 .carousel-wrap::-webkit-scrollbar { display: none; }
 .carousel-wrap .carousel-item { scroll-snap-align: start; }
+.carousel-wrap:focus-visible { outline: 2px solid var(--color-zoa-forest); outline-offset: 4px; }
 
 @media (min-width: 768px) {
   .carousel-wrap { gap: 1.25rem; }
-}
-@media (min-width: 1024px) {
-  .carousel-wrap { scroll-padding-left: 2.5rem; } /* lg: matches spacer w-10 */
-}
-@media (min-width: 1280px) {
-  .carousel-wrap { scroll-padding-left: 5rem; } /* xl: matches spacer w-20 del contenedor 1600px */
 }
 
 /* ── Anti-zoom en iOS: inputs necesitan min 16px para no hacer zoom ── */
@@ -206,15 +211,18 @@ button, input, textarea, select {
    - Scrolled or non-home → slate
    ====================================================================== */
 .zoa-navbar {
-  --nc: #FFF7F5; /* default off-white for home hero SSR */
+  --nc: #FFF7F5;                          /* default off-white for home hero SSR */
+  --nc-hover: rgba(255, 247, 245, 0.72);  /* hover sobre video: off-white al 72% */
 }
-/* After React hydration: non-home pages get slate */
+/* After React hydration: non-home pages get slate + forest hover */
 .zoa-navbar[data-home="false"] {
   --nc: var(--color-zoa-slate);
+  --nc-hover: var(--color-zoa-forest);
 }
-/* Scrolled state always gets slate */
+/* Scrolled state always gets slate + forest hover */
 .zoa-navbar[data-scrolled="true"] {
   --nc: var(--color-zoa-slate);
+  --nc-hover: var(--color-zoa-forest);
 }
 
 /* ── Product Card: CSS-only hover (no JS state) ── */
@@ -276,6 +284,17 @@ button, input, textarea, select {
 .hairline-inverse-l  { border-left: 1px solid var(--color-zoa-line-inverse); }
 .hairline-inverse-r  { border-right: 1px solid var(--color-zoa-line-inverse); }
 
+/* ── v4.1 · Hairline de acento forest (1px al 35%) ── */
+.hairline-forest { border: 1px solid var(--color-zoa-forest-35); }
+
+/* ── v4.1 · Regla corta de acento forest (bloque 2px × 24px) ── */
+.rule-forest {
+  display: block;
+  height: 0.125rem;
+  width: 1.5rem;
+  background-color: var(--color-zoa-forest);
+}
+
 /* ── Overline editorial ── */
 .overline {
   font-family: var(--font-sans);
@@ -294,6 +313,16 @@ button, input, textarea, select {
   text-transform: uppercase;
   letter-spacing: 0.32em;
   color: var(--color-zoa-slate-inverse-60);
+}
+/* v4.1 · Overline de acento forest (texto corto, nunca párrafos largos) */
+.overline-forest {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  color: var(--color-zoa-forest);
 }
 
 /* ── Micro-label (10px / 0.22em) ── */
@@ -322,6 +351,13 @@ button, input, textarea, select {
 }
 .link-underline:hover::after,
 .link-underline:focus-visible::after { transform: scaleX(1); }
+
+/* ── Transición de página (app/template.tsx): fade + y 8px ── */
+@keyframes zoa-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter { animation: zoa-page-enter 0.42s var(--ease-out-expo) both; }
 
 /* ── Reveal de imagen: máscara clip-path + zoom ── */
 .img-reveal {
@@ -395,6 +431,7 @@ body.zoa-hide-fab .zoa-whatsapp {
   }
 
   .marquee-track { animation: none !important; transform: none !important; }
+  .page-enter { animation: none !important; }
   .img-reveal { clip-path: none !important; }
   .img-reveal > img,
   .img-reveal > .img-reveal-media { transform: none !important; }

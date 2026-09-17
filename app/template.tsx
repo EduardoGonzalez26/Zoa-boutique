@@ -1,26 +1,14 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
 /**
  * Transición de página global (App Router `template`):
  * fade + y 8px a 420ms con `--ease-out-expo`.
- * Con `prefers-reduced-motion` no anima.
+ *
+ * Es CSS puro (`.page-enter` en globals.css) a propósito: framer-motion
+ * captura `initial`/`transition` al montar, así que un flip post-mount de
+ * `useReducedMotion` no cancela la animación ya iniciada y el usuario RM
+ * seguía viendo el fade. Con CSS, `prefers-reduced-motion` se resuelve en
+ * la hoja de estilos —sin estado de React— por lo que SSR y primer render
+ * del cliente son idénticos y con RM la página queda estática.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
-  const reduceMotion = useReducedMotion();
-
-  if (reduceMotion) return <>{children}</>;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.42, ease: EASE }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="page-enter">{children}</div>;
 }

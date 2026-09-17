@@ -42,8 +42,8 @@ export default function BlogCard({ article, featured = false, priority = false }
 
         <div className="md:col-span-5 md:pl-2">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Overline>{article.category}</Overline>
-            <span aria-hidden className="h-px w-6 bg-zoa-line-strong" />
+            <Overline tone="forest">{article.category}</Overline>
+            <span aria-hidden className="h-px w-6 bg-zoa-forest-35" />
             <span className="font-sans text-[11px] tracking-wide text-zoa-slate-60 tabular">{dateLabel}</span>
           </div>
 
@@ -62,7 +62,7 @@ export default function BlogCard({ article, featured = false, priority = false }
 
           <Link
             href={`/blog/${article.slug}`}
-            className="link-underline mt-8 inline-flex cursor-pointer items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
+            className="link-underline mt-8 inline-flex cursor-pointer items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
           >
             Leer artículo · {article.readTime}
             <ArrowRight size={12} aria-hidden />
@@ -90,13 +90,13 @@ export default function BlogCard({ article, featured = false, priority = false }
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Overline>{article.category}</Overline>
-          <span aria-hidden className="h-px w-5 bg-zoa-line-strong" />
+          <Overline tone="forest">{article.category}</Overline>
+          <span aria-hidden className="h-px w-5 bg-zoa-forest-35" />
           <span className="font-sans text-[11px] tracking-wide text-zoa-slate-60 tabular">{dateLabel}</span>
         </div>
 
         <h2 className="mt-4 font-display text-[clamp(1.25rem,2vw,1.6rem)] font-normal leading-[1.12] tracking-[-0.01em] text-zoa-slate">
-          <span className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-zoa-slate after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:after:scale-x-100">
+          <span className="relative after:absolute after:-bottom-0.5 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-zoa-forest after:transition-transform after:duration-300 after:ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:after:scale-x-100">
             {article.title}
           </span>
         </h2>
@@ -105,7 +105,7 @@ export default function BlogCard({ article, featured = false, priority = false }
           {article.excerpt}
         </p>
 
-        <span className="mt-6 inline-flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate">
+        <span className="mt-6 inline-flex items-center gap-2 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-colors duration-200 group-hover:text-zoa-forest">
           Leer artículo · {article.readTime}
           <ArrowRight
             size={12}

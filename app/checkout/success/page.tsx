@@ -10,7 +10,7 @@ export default function CheckoutSuccessPage() {
       <div className="w-full max-w-md">
         <div className="hairline flex flex-col items-center gap-6 px-8 py-14 text-center">
           <CheckCircle size={48} strokeWidth={1.1} aria-hidden className="text-zoa-success" />
-          <p className="overline">Pedido confirmado</p>
+          <p className="overline-forest">Pedido confirmado</p>
           <h1 className="text-balance font-display text-[clamp(2rem,4.5vw,3.25rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             ¡Pago recibido!
           </h1>
