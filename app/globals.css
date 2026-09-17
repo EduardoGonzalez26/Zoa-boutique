@@ -204,11 +204,15 @@ button, input, textarea, select {
   }
 }
 
-/* ── Navbar: --nc CSS variable drives nav text color ──
+/* ── Navbar: --nc / --nc-hover CSS variables drive nav ink ──
    DEFAULT: off-white (correct for home hero before JS hydration)
-   After React sets data-home and data-scrolled, color updates:
-   - Home + not scrolled → #FFF7F5
-   - Scrolled or non-home → slate
+   After React sets data-home / data-scrolled / data-panel, ink updates:
+   - Home + not scrolled + NO panel → --nc #FFF7F5 (+ hover off-white/72)
+   - Scrolled | non-home | panel deployed (mega menú o búsqueda) → --nc slate
+     (+ hover forest)
+   NOTE: Navbar.tsx writes BOTH properties inline from a single `solidNav`
+   boolean (inline wins over these rules); data-panel keeps the third state
+   documented/observable. A deployed panel NEVER sits over a transparent navbar.
    ====================================================================== */
 .zoa-navbar {
   --nc: #FFF7F5;                          /* default off-white for home hero SSR */
@@ -223,6 +227,38 @@ button, input, textarea, select {
 .zoa-navbar[data-scrolled="true"] {
   --nc: var(--color-zoa-slate);
   --nc-hover: var(--color-zoa-forest);
+}
+/* Panel deployed (mega menú / búsqueda): slate + forest hover — third state */
+.zoa-navbar[data-panel="true"] {
+  --nc: var(--color-zoa-slate);
+  --nc-hover: var(--color-zoa-forest);
+}
+
+/* ── Logo Zoa: wordmark SVG (public/logozoa.svg) como máscara recoloreable ──
+   El SVG es monocromo; se pinta con background-color = currentColor, así que
+   hereda exactamente --nc / --nc-hover (o un slate explícito en el drawer)
+   sin duplicar assets. Proporción 1485:460 ≈ 3.23:1 (reservar w/h siempre). */
+.zoa-logo {
+  display: block;
+  background-color: currentColor;
+  -webkit-mask-image: url("/logozoa.svg");
+          mask-image: url("/logozoa.svg");
+  -webkit-mask-size: contain;
+          mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+}
+
+/* ── Logo watermark del footer ──
+   Misma banda vertical que el wordmark Bodoni anterior
+   (font clamp(5rem,12vw,11rem) × leading 0.8 → alto clamp(4rem,9.6vw,8.8rem)),
+   con el ancho derivado de la proporción 1485:460 (≈3.2283). Dimensiones
+   explícitas → sin CLS; el pt-10 y el ritmo del footer no cambian. */
+.zoa-logo-footer {
+  height: clamp(4rem, 9.6vw, 8.8rem);
+  width: calc(clamp(4rem, 9.6vw, 8.8rem) * 3.2283);
 }
 
 /* ── Product Card: CSS-only hover (no JS state) ── */

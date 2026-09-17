@@ -82,7 +82,7 @@ Utilidades: `.hairline`, `.hairline-t/-b/-l/-r` (arena) y `.hairline-inverse`, `
 Forest es **acción + acento sobre superficies claras**, con un **cupo de exactamente 1 banda full-bleed forest por página**.
 
 - **Acción**: fondo del botón `primary`, CTA de compra/pago, FAB de WhatsApp, `Chip variant="forest"`, talla seleccionada, filtro activo.
-- **Acento (texto/ícono/borde, siempre sobre arena u off-white)**: numeral de índice del `Overline` (tone default), overlines de categoría (blog/legal/checkout), cifras métricas de la home, íconos de promesas, íconos de confianza del PDP, hovers del navbar (`--nc-hover`), badge de bolsa, rombos del anuncio, `.rule-forest`, numerales + barra activa 2px + itálica activa de `CollectionIndex`, badge NUEVO + "VER PRODUCTO" + tallas disponibles de `ProductCard`, estados activos de `TiendaClient`, "Disponible" del PDP, contador y drag handle del carrito, overlines/hovers/wordmark del footer, hovers del blog y páginas legales.
+- **Acento (texto/ícono/borde, siempre sobre arena u off-white)**: numeral de índice del `Overline` (tone default), overlines de categoría (blog/legal/checkout), cifras métricas de la home, íconos de promesas, íconos de confianza del PDP, hovers del navbar (`--nc-hover`), badge de bolsa, rombos del anuncio, `.rule-forest`, numerales + barra activa 2px + itálica activa de `CollectionIndex`, badge NUEVO + "VER PRODUCTO" + tallas disponibles de `ProductCard`, estados activos de `TiendaClient`, "Disponible" del PDP, contador y drag handle del carrito, overlines/hovers/logo del footer, hovers del blog y páginas legales.
 - **Banda full-bleed (1 por página)**: home → `Marquee variant="forest"` (el `CTABanner` de la home queda **slate**); resto de páginas → `CTABanner` **forest**. La alternancia vive en `CTABanner.tsx` con `usePathname()`. No puede haber una segunda banda forest en la misma vista.
 - **`Button`**: `outline` = borde `forest-35` + texto forest + hover invierte a fondo forest con tinta off-white; `link-arrow` default = forest (`tone="inverse"` para bandas); `inverse` = fondo off-white + **texto forest** + hover sand; focus ring forest en variantes claras y off-white/surface sobre bandas oscuras.
 - **`:focus-visible` global = forest** (outline 2px, offset 2, también en `.carousel-wrap` con offset 4). **Regla de auditoría**: sobre bandas oscuras (slate/wine/forest), foto o video el anillo forest se sustituye siempre por un anillo off-white/surface explícito (`ring-zoa-surface`, `ring-current` sobre video, `tone="inverse"`); el forest nunca se pinta sobre oscuro (1.17:1).
@@ -125,7 +125,7 @@ Cargadas con `next/font/google` en `app/layout.tsx`:
 | Body de lectura | Archivo 400 | `16px` | `1.85` | Cuerpo de artículo de blog |
 | Muted / meta | Archivo 400 | `13px` | `1.7` | `--color-zoa-slate-60` |
 | Precio | Archivo 500 | `15px` (PDP hasta `28px`) | `0.01em`, `tabular` | Cards y PDP |
-| Wordmark footer | Bodoni 400 | `clamp(5rem, 12vw, 11rem)` | `0.8` / `forest/[0.07]` | Elemento gráfico del footer |
+| Logo watermark footer | SVG `public/logozoa.svg` vía `.zoa-logo` (máscara) | Alto `clamp(4rem, 9.6vw, 8.8rem)` · ancho ≈3.23:1 | `forest/[0.07]` | Elemento gráfico del footer |
 
 ### 2.2 Regla de itálica Bodoni (limitada)
 
@@ -204,9 +204,9 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 
 ### 6.0 Navbar (global, `Navbar.tsx`) — reestructurado en v4.2
 
-- **Fila superior real**: Logo (wordmark ZOA®) · **Inicio · Colecciones ▾ · Categorías ▾ · Tienda ▾** · lupa · bolsa. **Blog y Rastrear envío ya NO están en la fila**: viven dentro del grupo **Tienda** (mega menú desktop y drawer móvil).
+- **Fila superior real**: Logo (`logozoa.svg` enmascarado con `.zoa-logo` sobre `--nc`/`--nc-hover`; 71×22 px < lg, 84×26 px ≥ lg) · **Inicio · Colecciones ▾ · Categorías ▾ · Tienda ▾** · lupa · bolsa. **Blog y Rastrear envío ya NO están en la fila**: viven dentro del grupo **Tienda** (mega menú desktop y drawer móvil).
 - **Barra de anuncio** (arena, marquee 38s, rombos hairline forest) que colapsa a `h-0` al scroll; **barra de progreso de scroll 1px forest** en el borde superior (reduced-motion: `forest/35` estático).
-- **Estados de tinta**: sobre el hero de la home sin scroll, off-white (`--nc`, hover off-white/72); nav sólido (`data-scrolled` o página interna), slate con **hover forest** (`--nc-hover`). Un script inline en `layout.tsx` fija `data-home`/`--nc` antes de la hidratación.
+- **Estados de tinta**: sobre el hero de la home sin scroll y sin paneles, off-white (`--nc`, hover off-white/72); nav sólido (`data-scrolled`, `data-panel` o página interna), slate con **hover forest** (`--nc-hover`). Un panel desplegado (mega menú o búsqueda) siempre pinta la navbar sólida —nunca queda sobre una navbar transparente— y `Navbar.tsx` escribe `--nc`/`--nc-hover` inline desde un único booleano `solidNav`. Un script inline en `layout.tsx` fija `data-home`/`--nc` antes de la hidratación.
 - **Un solo panel full-bleed `#mega-menu`** (off-white, `hidden` bajo `md`) que renderiza **solo el grupo activo** (`OpenMenu = "collections" | "categories" | "shop"`); `motion.div key={openMenu}` con fade de 180ms **sin `mode="wait"`**; el chevron rota solo el trigger activo; `role="region"` + `aria-label` por menú; abre con `onMouseEnter`, alterna por click (touch/teclado) y cierra con Escape, click-outside o al salir del header con el puntero; títulos con `.rule-forest`; links con hover forest.
   - **Colecciones**: lista 01–05 + Destacado en `xl` con imagen y `link-arrow`. La imagen es el **poster del clip `two-models-walking` del cloud `ppo6ze2s`** (ya no `dsx1gi6mt`).
   - **Categorías**: grid de 3 columnas + CTA.
@@ -268,7 +268,7 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 
 ### 6.7 Footer (global)
 
-- Fondo off-white; **wordmark gigante** Bodoni `clamp(5rem,12vw,11rem)` en **`forest/[0.07]`** como elemento gráfico.
+- Fondo off-white; **logo watermark gigante** = `public/logozoa.svg` enmascarado con `.zoa-logo` (+ `.zoa-logo-footer`: alto `clamp(4rem,9.6vw,8.8rem)`, ancho ≈3.23:1) en **`forest/[0.07]`** como elemento gráfico.
 - **Círculo Zoa**: grid 5/7 con `Overline` + `NewsletterForm` (captura de correo → WhatsApp; input enfoca borde forest + ring `forest/15`; botón outline forest).
 - Columnas numeradas 00–03 (Zoa, Tienda, Colecciones, Información) con **títulos e índices forest** y links slate-60 con hover forest; contacto, redes (hover forest) y crédito webi.mx en la barra inferior.
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ShoppingBag, Menu, X, Search, ChevronDown, Instagram, Phone } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion, useScroll, useSpring } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { useRouter, usePathname } from "next/navigation";
 import Button from "@/components/ui/Button";
@@ -82,6 +82,10 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  // Retención del estado sólido durante la salida (~250 ms) de cada panel:
+  // se encienden al cerrar y se apagan en el `onExitComplete` de su AnimatePresence.
+  const [menuExiting, setMenuExiting] = useState(false);
+  const [searchExiting, setSearchExiting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const desktopNavRef = useRef<HTMLElement>(null);
   const reduceMotion = useReducedMotion();
@@ -89,6 +93,31 @@ export default function Navbar() {
   // `false` en SSR y primer render del cliente.
   const isMounted = useMounted();
   const rm = isMounted && reduceMotion;
+
+  // ── Cierres centralizados: cierran el panel y retienen el estado sólido de la
+  // navbar durante su animación de salida (anti-flash sobre el video del hero) ──
+  const closeMenu = useCallback(() => {
+    if (openMenu === null) return;
+    setMenuExiting(true);
+    setOpenMenu(null);
+  }, [openMenu]);
+
+  const closeSearch = useCallback(() => {
+    if (!searchOpen) return;
+    setSearchExiting(true);
+    setSearchOpen(false);
+  }, [searchOpen]);
+
+  // Reabrir a mitad de salida cancela la retención (el panel vuelve a estar presente)
+  const showMenu = useCallback((key: Exclude<OpenMenu, null>) => {
+    setMenuExiting(false);
+    setOpenMenu(key);
+  }, []);
+
+  const showSearch = useCallback(() => {
+    setSearchExiting(false);
+    setSearchOpen(true);
+  }, []);
 
   // ── Barra de progreso de scroll (transform, sin re-render por frame) ──
   const { scrollYProgress } = useScroll();
@@ -109,46 +138,50 @@ export default function Navbar() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setSearchOpen(false);
+        closeSearch();
+        closeMenu();
         setMobileOpen(false);
-        setOpenMenu(null);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [closeMenu, closeSearch]);
 
   // Click fuera del nav desktop cierra el mega menú
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (desktopNavRef.current && !desktopNavRef.current.contains(e.target as Node)) {
-        setOpenMenu(null);
+        closeMenu();
       }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, []);
+  }, [closeMenu]);
 
   const count = isMounted ? itemCount() : 0;
   const pathname = usePathname();
   const isHome = pathname === "/" || pathname === "";
-  const solidNav = scrolled || !isHome;
-  const navColor = isHome && !scrolled ? "#FFF7F5" : "var(--color-zoa-slate)";
+  // Un único booleano gobierna clases, --nc y --nc-hover (nunca divergen):
+  // el estado sólido también aplica con un panel desplegado o aún en su salida.
+  const panelOpen = openMenu !== null || searchOpen || menuExiting || searchExiting;
+  const solidNav = scrolled || !isHome || panelOpen;
+  const navColor = solidNav ? "var(--color-zoa-slate)" : "#FFF7F5";
+  const navColorHover = solidNav ? "var(--color-zoa-forest)" : "rgba(255, 247, 245, 0.72)";
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/tienda?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
-      setSearchOpen(false);
+      closeSearch();
       setMobileOpen(false);
     }
   };
 
   const closeAll = () => {
     setMobileOpen(false);
-    setSearchOpen(false);
-    setOpenMenu(null);
+    closeSearch();
+    closeMenu();
   };
 
   const drawerList = {
@@ -165,13 +198,14 @@ export default function Navbar() {
       <header
         data-home={isHome ? "true" : "false"}
         data-scrolled={scrolled ? "true" : "false"}
-        onMouseLeave={() => setOpenMenu(null)}
+        data-panel={panelOpen ? "true" : "false"}
+        onMouseLeave={closeMenu}
         className={`zoa-navbar fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
           solidNav
             ? "border-b border-zoa-line bg-zoa-sand/95 backdrop-blur-md"
             : "border-b border-transparent bg-transparent"
         }`}
-        style={{ "--nc": navColor } as React.CSSProperties}
+        style={{ "--nc": navColor, "--nc-hover": navColorHover } as React.CSSProperties}
       >
         {/* ── Progreso de scroll: 1px forest en el borde superior ── */}
         {rm ? (
@@ -219,21 +253,21 @@ export default function Navbar() {
         {/* ── Fila principal ── */}
         <div className="container-zoa flex h-16 items-center md:h-20">
 
-          {/* Wordmark */}
+          {/* Logo (wordmark ZOA® — SVG monocromo vía máscara) */}
           <div className="flex-none">
             <Link
               href="/"
               aria-label="Zoa — Inicio"
-              className="cursor-pointer font-display text-[clamp(22px,2.4vw,30px)] leading-none tracking-[0.14em] text-[color:var(--nc)] transition-colors duration-300 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+              className="block cursor-pointer text-[color:var(--nc)] transition-colors duration-300 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
             >
-              ZOA<sup className="align-super text-[0.4em] tracking-normal opacity-70">®</sup>
+              <span aria-hidden className="zoa-logo h-[22px] w-[71px] lg:h-[26px] lg:w-[84px]" />
             </Link>
           </div>
 
           {/* Desktop nav */}
           <div className="min-w-0 flex-1 px-2 md:px-8">
             <nav ref={desktopNavRef} aria-label="Principal" className="hidden md:block">
-              <ul className="m-0 flex list-none items-center justify-center gap-7 p-0 lg:gap-9">
+              <ul className="m-0 flex list-none items-center justify-center gap-5 p-0 lg:gap-9">
 
                 <li className="list-none">
                   <Link href="/" className={NAV_ITEM}>
@@ -249,8 +283,8 @@ export default function Navbar() {
                       aria-haspopup="true"
                       aria-expanded={openMenu === key}
                       aria-controls="mega-menu"
-                      onClick={() => setOpenMenu((v) => (v === key ? null : key))}
-                      onMouseEnter={() => setOpenMenu(key)}
+                      onClick={() => (openMenu === key ? closeMenu() : showMenu(key))}
+                      onMouseEnter={() => showMenu(key)}
                       className={NAV_ITEM}
                     >
                       <span className="link-underline">{MENU_LABELS[key]}</span>
@@ -271,7 +305,11 @@ export default function Navbar() {
           <div className="flex flex-none shrink-0 items-center gap-1 md:gap-2">
             <button
               type="button"
-              onClick={() => { setSearchOpen((v) => !v); setMobileOpen(false); }}
+              onClick={() => {
+                if (searchOpen) closeSearch();
+                else showSearch();
+                setMobileOpen(false);
+              }}
               aria-label="Buscar"
               aria-expanded={searchOpen}
               className="flex h-11 w-11 cursor-pointer items-center justify-center transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
@@ -313,7 +351,7 @@ export default function Navbar() {
               type="button"
               className="flex h-11 w-11 cursor-pointer items-center justify-center transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current md:hidden"
               style={{ color: "var(--nc)" }}
-              onClick={() => { setMobileOpen((v) => !v); setSearchOpen(false); setOpenMenu(null); }}
+              onClick={() => { setMobileOpen((v) => !v); closeSearch(); closeMenu(); }}
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileOpen}
             >
@@ -323,7 +361,7 @@ export default function Navbar() {
         </div>
 
         {/* ── Panel desplegable full-bleed (#FFF7F5) — un bloque por menú ── */}
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={() => setMenuExiting(false)}>
           {openMenu !== null && (
             <motion.div
               key="mega"
@@ -490,7 +528,7 @@ export default function Navbar() {
         </AnimatePresence>
 
         {/* ── Panel de búsqueda (desktop y mobile) ── */}
-        <AnimatePresence>
+        <AnimatePresence onExitComplete={() => setSearchExiting(false)}>
           {searchOpen && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
@@ -510,7 +548,7 @@ export default function Navbar() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); }
+                    if (e.key === "Escape") { closeSearch(); setSearchQuery(""); }
                   }}
                   placeholder="Buscar blusas, vestidos, sweaters…"
                   aria-label="Buscar productos"
@@ -524,7 +562,7 @@ export default function Navbar() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                  onClick={() => { closeSearch(); setSearchQuery(""); }}
                   aria-label="Cerrar búsqueda"
                   className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
                 >
@@ -547,9 +585,7 @@ export default function Navbar() {
             >
               {/* Barra superior */}
               <div className="hairline-b flex h-16 flex-none items-center justify-between px-5">
-                <span className="font-display text-xl leading-none tracking-[0.14em] text-zoa-slate">
-                  ZOA
-                </span>
+                <span aria-hidden className="zoa-logo h-[22px] w-[71px] text-zoa-slate" />
                 <button
                   type="button"
                   onClick={closeAll}

@@ -27,11 +27,9 @@ export default function Footer() {
 
   return (
     <footer className="bg-zoa-surface text-zoa-slate">
-      {/* ── Wordmark gigante como elemento gráfico ── */}
+      {/* ── Logo gigante como elemento gráfico (logozoa.svg enmascarado) ── */}
       <div aria-hidden className="overflow-hidden px-5 pt-10 md:px-10 xl:px-20">
-        <p className="select-none font-display text-[clamp(5rem,12vw,11rem)] font-normal leading-[0.8] tracking-[-0.02em] text-zoa-forest/[0.07]">
-          ZOA
-        </p>
+        <span className="zoa-logo zoa-logo-footer select-none text-zoa-forest/[0.07]" />
       </div>
 
       {/* ── Círculo Zoa ── */}
