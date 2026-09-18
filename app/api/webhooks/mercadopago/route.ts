@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     // ── Trigger email notifications ────────────────────────────────────────
     try {
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zoa.mx";
-      await fetch(`${baseUrl}/api/webhooks/payment-success`, {
+      const res = await fetch(`${baseUrl}/api/webhooks/payment-success`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -118,6 +118,10 @@ export async function POST(req: NextRequest) {
           carrier,
         }),
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.error("[webhook/mp] Email webhook failed:", res.status, text);
+      }
     } catch (emailErr) {
       console.error("[webhook/mp] Email error:", emailErr);
     }

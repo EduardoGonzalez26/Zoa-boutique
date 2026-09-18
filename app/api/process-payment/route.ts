@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
       //    unlike the old Vercel-only waitUntil helper.
       after(async () => {
         try {
-          await fetch(`${baseUrl}/api/webhooks/payment-success`, {
+          const res = await fetch(`${baseUrl}/api/webhooks/payment-success`, {
             method:  "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -229,6 +229,11 @@ export async function POST(req: NextRequest) {
               skydropxError,
             }),
           });
+          if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            console.error("[process-payment] Email webhook failed:", res.status, text);
+            return;
+          }
           console.log("[process-payment] Email webhook triggered — trackingNumber:", trackingNumber, "error:", skydropxError);
         } catch (e) {
           console.error("[process-payment] Email trigger failed:", e);

@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
+import { Resend, type CreateEmailResponse } from "resend";
 import type { CartItem } from "@/lib/types";
 import type { ShippingAddress } from "@/store/checkoutStore";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
@@ -22,7 +22,22 @@ function getResend(): Resend {
 }
 
 const ADMIN_EMAILS = ["carmen@zoa.mx", "zoa6521@gmail.com", "jgegmz@gmail.com"];
-const FROM_EMAIL   = "Zoa <hola@zoa.mx>";
+// Configurable para poder enviar desde un dominio verificado en Resend
+// (p. ej. mientras zoa.mx termina de verificarse).
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "Zoa <hola@zoa.mx>";
+
+// El SDK de Resend (v6) NO lanza en errores de API: resuelve { data, error },
+// por lo que allSettled marca los envíos como "fulfilled" aunque fallen.
+type EmailSendResult = PromiseSettledResult<CreateEmailResponse>;
+
+function extractEmailError(result: EmailSendResult): string | null {
+  if (result.status === "rejected") {
+    return result.reason instanceof Error ? result.reason.message : String(result.reason);
+  }
+  const apiError = result.value?.error;
+  if (!apiError) return null;
+  return apiError.message || apiError.name;
+}
 
 // ── HTML helpers ──────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -293,12 +308,25 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    const errors = [customerResult, adminResult]
-      .filter((r) => r.status === "rejected")
-      .map((r) => (r as PromiseRejectedResult).reason);
+    const customerError = extractEmailError(customerResult);
+    const adminError    = extractEmailError(adminResult);
 
-    if (errors.length) {
-      console.error("[payment-success webhook] Email errors:", errors);
+    if (customerError) {
+      console.error("[payment-success] Customer email failed:", customerError);
+    }
+    if (adminError) {
+      console.error("[payment-success] Admin email failed:", adminError);
+    }
+
+    if (customerError || adminError) {
+      return NextResponse.json(
+        {
+          error:    "Email send failed",
+          customer: customerError ?? "ok",
+          admin:    adminError ?? "ok",
+        },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({

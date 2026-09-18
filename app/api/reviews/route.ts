@@ -89,8 +89,10 @@ export async function POST(req: NextRequest) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(process.env.RESEND_API_KEY!);
+      // Mismo remitente configurable que payment-success (permite usar un dominio verificado en Resend).
+      const from = process.env.RESEND_FROM_EMAIL ?? "Zoa <hola@zoa.mx>";
       await resend.emails.send({
-        from: "Zoa <hola@zoa.mx>",
+        from,
         to:   ["carmen@zoa.mx", "zoa6521@gmail.com"],
         subject: `⭐ Nueva reseña en ${productName ?? productId}`,
         html: `
