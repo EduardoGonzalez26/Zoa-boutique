@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import CTABanner from "@/components/CTABanner";
 import CartDrawer from "@/components/CartDrawer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import { getBestSellers } from "@/lib/googleSheets";
 
 // ── Texto/UI: Archivo — neo-grotesca limpia estilo Helvetica ─────────────────
 const archivo = Archivo({
@@ -43,11 +44,15 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Lo más vendido (pestaña "Ventas") para el destacado del mega menú.
+  // Nunca debe tumbar el render: ante cualquier fallo cae al poster estático.
+  const bestSellers = await getBestSellers(4).catch(() => []);
+
   return (
     <html lang="es" className={`${archivo.variable} ${bodoniModa.variable}`} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-zoa-sand text-zoa-slate font-sans">
-        <Navbar />
+        <Navbar bestSellers={bestSellers} />
         {/* Runs synchronously right after Navbar HTML is in the DOM, before paint.
             Sets data-home and --nc so the CSS rule fires correctly pre-hydration. */}
         <script

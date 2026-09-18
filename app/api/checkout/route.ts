@@ -10,11 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { Preference } from "mercadopago";
 import { mpClient } from "@/lib/mercadopago";
 import type { CheckoutBody } from "@/lib/types";
+import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
 
 const VIP_CODE = "PROBADOR";
 const VIP_DEPOSIT = 300; // MXN
-const SHIPPING_FLAT = 150; // MXN
-const FREE_SHIPPING_THRESHOLD = 3000; // MXN
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     const isVip = vipCode?.trim().toUpperCase() === VIP_CODE;
+    const isFreeShipping = vipCode?.trim().toUpperCase() === FREE_SHIPPING_CODE;
 
     // ── Build MP Preference Items ──────────────────────────────────────────────
     const preferenceItems = isVip
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       (sum, item) => sum + item.product.price * item.quantity,
       0
     );
-    const shippingAmount = isVip
+    const shippingAmount = isVip || isFreeShipping
       ? 0
       : subtotal >= FREE_SHIPPING_THRESHOLD
       ? 0

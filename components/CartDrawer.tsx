@@ -8,13 +8,12 @@ import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, Credi
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
 import type { CartItem } from "@/lib/types";
+import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Overline from "@/components/ui/Overline";
 
 // ── MercadoPagoWrapper loaded client-side only (prevents SSR hydration error) ───
 const MercadoPagoWrapper = dynamic(() => import('@/components/MercadoPagoWrapper'), { ssr: false });
-
-const FREE_SHIPPING_THRESHOLD = 3000;
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(n);
@@ -33,7 +32,7 @@ export default function CartDrawer() {
   const router = useRouter();
   const {
     items, vipCode, isOpen, drawerView,
-    subtotal, shipping, total, isVip,
+    subtotal, shipping, total, isVip, isFreeShipping,
     couponDiscount, couponType, discountAmount,
     removeItem, updateQuantity, setVipCode, setCouponDiscount,
     closeCart, setDrawerView, clearCart,
@@ -54,10 +53,19 @@ export default function CartDrawer() {
     const code = promoCode.trim().toUpperCase();
     if (!code) return;
 
-    // Prevent stacking: if a coupon is already applied, block
-    if (couponDiscount > 0 && vipCode && code !== vipCode) {
+    // Prevent stacking: one code at a time
+    if (vipCode && code !== vipCode) {
       setCouponStatus("error");
-      setCouponMsg(`Ya tienes el cupón ${vipCode} aplicado. Bórralo primero para usar otro.`);
+      setCouponMsg(`Ya tienes el código ${vipCode} aplicado. Quítalo primero para usar otro.`);
+      return;
+    }
+
+    // Secret free-shipping code — resolved locally, never sent to Apps Script
+    if (code === FREE_SHIPPING_CODE) {
+      setVipCode(code);
+      setCouponDiscount(0, "envio-gratis");
+      setCouponMsg("Código aplicado — envío gratis");
+      setCouponStatus("ok");
       return;
     }
 
@@ -158,8 +166,9 @@ export default function CartDrawer() {
   const InputCls = "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3 py-2.5 font-sans text-sm text-zoa-slate placeholder:text-zoa-slate-60 transition-colors focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
 
   const itemCountTotal = items.reduce((sum, i) => sum + i.quantity, 0);
-  const freeShippingProgress = Math.min(100, Math.round((subtotalVal / FREE_SHIPPING_THRESHOLD) * 100));
-  const missingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotalVal);
+  const freeShipCodeActive = isFreeShipping();
+  const freeShippingProgress = freeShipCodeActive ? 100 : Math.min(100, Math.round((subtotalVal / FREE_SHIPPING_THRESHOLD) * 100));
+  const missingForFreeShipping = freeShipCodeActive ? 0 : Math.max(0, FREE_SHIPPING_THRESHOLD - subtotalVal);
 
   return (
     <AnimatePresence>
@@ -314,7 +323,7 @@ export default function CartDrawer() {
                         <div className="flex items-center justify-between border border-zoa-success px-3 py-2">
                           <span className="inline-flex items-center gap-2 font-sans text-[11px] font-medium text-zoa-success">
                             <Check size={12} aria-hidden />
-                            {vipCode}{couponDiscount > 0 ? ` — ${couponDiscount}% off` : " — venta física"}
+                            {vipCode}{couponType === "envio-gratis" ? " — envío gratis" : couponDiscount > 0 ? ` — ${couponDiscount}% off` : " — venta física"}
                           </span>
                           <button onClick={handleRemoveCoupon}
                             className="ml-3 cursor-pointer text-zoa-success transition-colors hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine"

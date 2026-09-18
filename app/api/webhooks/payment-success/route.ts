@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import type { CartItem } from "@/lib/types";
 import type { ShippingAddress } from "@/store/checkoutStore";
+import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -109,7 +110,7 @@ function buildCustomerEmail(params: {
 }): string {
   const { address, items, total, paymentId, vipCode, orderId, trackingNumber, carrier } = params;
   const subtotal = items.reduce((s, ci) => s + ci.product.price * ci.quantity, 0);
-  const shipping = subtotal >= 3000 ? 0 : 150;
+  const shipping = vipCode.trim().toUpperCase() === FREE_SHIPPING_CODE || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
   const isVip = vipCode === "PROBADOR";
 
   const trackingBlock = trackingNumber

@@ -9,6 +9,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useRouter, usePathname } from "next/navigation";
 import Button from "@/components/ui/Button";
 import useMounted from "@/components/ui/useMounted";
+import type { BestSeller } from "@/lib/types";
 
 const CATEGORIES = [
   "Blusas","Sweaters","Sacos","Chamarras",
@@ -73,10 +74,12 @@ function HairlineDiamond({ className = "" }: { className?: string }) {
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[] }) {
   const { itemCount, openCart } = useCartStore();
   const router = useRouter();
 
+  // Índice del destacado activo (crossfade de "Lo más vendido" en Colecciones)
+  const [featuredIdx, setFeaturedIdx] = useState(0);
   const [scrolled, setScrolled]   = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -112,7 +115,20 @@ export default function Navbar() {
   const showMenu = useCallback((key: Exclude<OpenMenu, null>) => {
     setMenuExiting(false);
     setOpenMenu(key);
+    // El destacado siempre arranca en la prenda más vendida al abrir Colecciones
+    if (key === "collections") setFeaturedIdx(0);
   }, []);
+
+  // Crossfade del destacado: avanza cada 4 s solo con el panel abierto
+  // (estático con reduced motion, una sola prenda o sin datos)
+  useEffect(() => {
+    if (openMenu !== "collections" || rm || bestSellers.length <= 1) return;
+    const timer = setInterval(
+      () => setFeaturedIdx((v) => (v + 1) % bestSellers.length),
+      4000
+    );
+    return () => clearInterval(timer);
+  }, [openMenu, rm, bestSellers.length]);
 
   const showSearch = useCallback(() => {
     setSearchExiting(false);
@@ -406,18 +422,43 @@ export default function Navbar() {
                       </ul>
                     </div>
 
-                    {/* Destacado editorial + CTA (solo xl) */}
+                    {/* Lo más vendido (crossfade) + CTA (solo xl) */}
                     <div className="hidden xl:block">
                       <span aria-hidden className={MENU_TITLE_RULE} />
-                      <p className="font-display text-xl leading-none text-zoa-slate">Destacado</p>
+                      <p className="font-display text-xl leading-none text-zoa-slate">
+                        {bestSellers.length > 0 ? "Lo más vendido" : "Destacado"}
+                      </p>
                       <div className="relative mt-5 aspect-[4/5] w-full overflow-hidden bg-zoa-sand">
-                        <Image
-                          src={MEGA_IMAGE}
-                          alt="Colección Zoa"
-                          fill
-                          sizes="320px"
-                          className="object-cover object-center"
-                        />
+                        {bestSellers.length > 0 ? (
+                          bestSellers.map((product, i) => (
+                            <Link
+                              key={product.id}
+                              href={`/product/${product.id}`}
+                              onClick={closeAll}
+                              tabIndex={i === featuredIdx ? 0 : -1}
+                              aria-hidden={i !== featuredIdx}
+                              className={`absolute inset-0 transition-opacity duration-700 ease-out ${
+                                i === featuredIdx ? "z-10 opacity-100" : "pointer-events-none opacity-0"
+                              }`}
+                            >
+                              <Image
+                                src={product.image}
+                                alt={product.name}
+                                fill
+                                sizes="320px"
+                                className="object-cover object-center"
+                              />
+                            </Link>
+                          ))
+                        ) : (
+                          <Image
+                            src={MEGA_IMAGE}
+                            alt="Colección Zoa"
+                            fill
+                            sizes="320px"
+                            className="object-cover object-center"
+                          />
+                        )}
                       </div>
                       <Button variant="link-arrow" href="/tienda" onClick={closeAll} className="mt-5">
                         Ver la colección

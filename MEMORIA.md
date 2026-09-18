@@ -1,8 +1,8 @@
 # MEMORIA — Zoa Boutique
 
 > Documento de continuidad del proyecto para agentes y equipo. Registra estado, decisiones y pendientes entre sesiones.
-> **Última actualización:** 2026-09-17 (sesión: logo SVG + navbar sólida con paneles desplegados).
-> **Rama:** `main` sincronizada con `origin/main` en `23f9a7d`. Working tree limpio salvo `.tmp-qa/` (untracked).
+> **Última actualización:** 2026-09-17 (sesión: «Lo más vendido» en el mega menú de Colecciones).
+> **Rama:** `main` sincronizada con `origin/main` en `2288808`. Working tree con la feature «Lo más vendido» **sin commitear** (5 archivos) + `.tmp-qa/` (untracked).
 > Este archivo **no sustituye** al código ni al design system: si hay discrepancia, mandan `design-system/zoa-boutique/MASTER.md` y el código.
 
 ---
@@ -42,7 +42,7 @@ Scripts: `dev`, `build`, `start`, `lint`.
 | `public/` | `logozoa.svg` (wordmark 1485×460 ≈ 3.23:1), `bannerzoa.png`, `blog-*.png` |
 
 ### Flujo de datos e integraciones
-1. **Google Sheets = CMS.** Lectura del CSV público (pestaña `Oficial`, columnas A–T) en `lib/googleSheets.ts`; ISR `revalidate = 60`. `getProducts` / `getGroupedProducts` (agrupa por nombre → variantes de color + `skus`) / `getGroupedProductById`. El ID de producto es siempre `NUM` (col. A); `SKU` es solo display.
+1. **Google Sheets = CMS.** Lectura del CSV público (pestaña `Oficial`, columnas A–T) en `lib/googleSheets.ts`; ISR `revalidate = 60`. `getProducts` / `getGroupedProducts` (agrupa por nombre → variantes de color + `skus`) / `getGroupedProductById`. El ID de producto es siempre `NUM` (col. A); `SKU` es solo display. `getBestSellers(limit)` cruza la pestaña `Ventas` (vía gviz, `revalidate = 300`) con el catálogo para el destacado del navbar; ante cualquier fallo devuelve `[]` y la UI cae al poster estático.
 2. **Escrituras al Sheet vía Google Apps Script** (`APPS_SCRIPT_URL`): `deductStock` (post-pago) y `logSale` (pestaña «Ventas»).
 3. **Mercado Pago:** Checkout Pro (`/api/checkout`) + Payment Brick en el drawer/checkout; webhooks MP y `payment-success` (`/api/webhooks/*`) disparan stock, venta, email y creación de envío Skydropx.
 4. **Skydropx:** cotización (`/api/shipping-rates`) y creación de envíos desde el webhook; credenciales OAuth2.
@@ -67,9 +67,9 @@ Scripts: `dev`, `build`, `start`, `lint`.
 - **PDP** (`/product/[id]`): galería (slider móvil / thumbs sticky desktop), variantes de color, guía de tallas (modal), reseñas, cross-sell, barra sticky móvil + `body.zoa-hide-fab`, `generateStaticParams` + metadata/OG.
 - **Blog** (`/blog`, `/blog/[slug]`): 4 artículos estáticos (`lib/blog.ts`), `ReadingProgress`, JSON-LD.
 - **Carrito/Checkout:** `CartDrawer` (vistas `cart`/`checkout`), cupones (`/api/validate-coupon`), VIP «PROBADOR» (depósito $300), envío $150 / gratis ≥ $3,000, Payment Brick + Checkout Pro, `success`/`failure`.
-- **Globales:** `Navbar` (logo SVG máscara, mega menú único full-bleed de 3 grupos, búsqueda, drawer móvil, navbar sólida con paneles), `Footer` (logo watermark, newsletter → WhatsApp), FAB WhatsApp, `CTABanner`, legales, `sitemap.ts`.
+- **Globales:** `Navbar` (logo SVG máscara, mega menú único full-bleed de 3 grupos, búsqueda, drawer móvil, navbar sólida con paneles, destacado **«Lo más vendido»**: crossfade de las 4 prendas más vendidas con enlace a PDP y avance cada 4 s), `Footer` (logo watermark, newsletter → WhatsApp), FAB WhatsApp, `CTABanner`, legales, `sitemap.ts`.
 
-**Pendiente de verificación en esta sesión:** no se ejecutó build/test aquí; la última referencia conocida (MASTER v4.3) reporta `tsc`/`build` verdes.
+**Verificación de la sesión (2026-09-17, feature «Lo más vendido»):** `tsc --noEmit` ✅, `eslint` de los 4 archivos ✅, `npm run build` ✅ (151 páginas, ISR 1m) y QA con Chrome headless vía CDP sobre `npm run start` ✅ (4 slides, rotación 0→1 a los ~5.2 s, opacidades correctas, imágenes 320×426 cargan). Procesos de QA cerrados.
 
 ## 5. Decisiones clave (ADR)
 
@@ -81,11 +81,13 @@ Scripts: `dev`, `build`, `start`, `lint`.
 | **ADR-04** | 2026-09-17 (`c12e10a`) | **Política de hidratación v4.3 (heredada y vigente):** prohibido `useReducedMotion()` directo; patrón `rm = mounted && reduceMotion`; `template.tsx` CSS puro; datos de `localStorage` post-mount (`isMounted`); único `suppressHydrationWarning` justificado en `<html>`. | Eliminar warnings de mismatch de framer-motion/SSR. Alternativa descartada: `suppressHydrationWarning` como parche. |
 | **ADR-05** | 2026-09-17 (`7318aaf`, v4.2) | **Reestructura navbar v4.2:** Blog y «Rastrear envío» viven dentro del grupo **Tienda** (no en la fila); mega menú único por grupo activo; hover forest solo con nav sólido; Cloudinary `ppo6ze2s` como cloud activo (incluido el poster del mega menú). | Simplificar la fila superior y unificar paneles. |
 | **ADR-06** | 2026-09-14 (`2ce8246`) | **Google Sheets como CMS sin hardcode:** `GOOGLE_SHEET_ID` obligatoria por env (error explícito si falta); lectura por CSV público (evita la inferencia de tipos de gviz que nullifica SKUs); escrituras vía Apps Script. | Seguridad y robustez del parseo de datos. |
+| **ADR-07** | 2026-09-17 (sin commit) | **Lectura de «Ventas» para best sellers:** la pestaña se lee con `gviz/tq?tqx=out:csv&sheet=Ventas` (el endpoint `/export?format=csv&sheet=` ignora pestañas que no son la primera y devuelve la `Oficial` en silencio; se valida el header "Fecha"+"Productos" y, si no coincide, se devuelve `[]`). Los ítems se parsean escaneando **todas** las celdas con regex `/^(.+?)\s*\(([^)]+)\)\s*x(\d+)/` (el layout real tiene 13 columnas y el Apps Script escribe los ítems en la última, no en la 11.ª del header), separados por `\|`; nombres normalizados (minúsculas, sin acentos). Se cruza contra `getGroupedProducts()`, se omiten prendas sin foto o fuera de catálogo, y `layout.tsx` (async) llama `getBestSellers(4).catch(() => [])` para que un fallo nunca tumbe el render: la UI cae al poster `two-models-walking`. | Robustez ante hojas compartidas/renombradas y cambios de layout del log; el fallback estático es obligatorio. Descartado: índice de columna fijo e `/export` con `sheet=`. |
 
 ## 6. Historial reciente
 
 | Hash | Fecha | Mensaje | Nota |
 |---|---|---|---|
+| — (working tree) | 2026-09-17 | Feature: «Lo más vendido» en el destacado del mega menú de Colecciones | **Sin commit.** 5 archivos: `lib/types.ts` (`BestSeller`), `lib/googleSheets.ts` (`fetchVentasRows`/`normalizeName`/`countSoldUnits`/`getBestSellers` + `GOOGLE_SHEET_VENTAS`), `app/layout.tsx` (async + prop), `components/Navbar.tsx` (crossfade 4 s, reduced motion, fallback al poster) y `MASTER.md` §6.0. Top 4 en vivo: `90` Pantalón de Vestir Recto (14 u), `51` Blusa Satinada Cuello Halter (11 u), `52` Vestido Midi Punto Negro (3 u), `77` Blusa Crop de Popelín con Cuello Solapa (3 u). |
 | `23f9a7d` | 2026-09-17 | Feature: Logo SVG (navbar/footer) y navbar solida con paneles desplegados | 7 archivos (`app/favicon.ico`, `app/globals.css`, `app/icon.png`, `app/icon.svg`, `components/Footer.tsx`, `components/Navbar.tsx`, `MASTER.md`). Integra el logo vía `.zoa-logo` + navbar sólida + ADR-02/03. |
 | `c12e10a` | 2026-09-17 | Feature: Arrgelar padding en botones del hero | 39 archivos: **añade `public/logozoa.svg`**, el fix de hidratación v4.3 (`useMounted.ts`, `template.tsx` CSS), MASTER/pages y el fix de padding del hero. El mensaje no refleja todo el contenido. |
 | `7318aaf` | 2026-09-17 | Update: New version Zoa Boutique V3 | Rediseño «EDITORIAL ATELIER»: MASTER v4 + overrides, kit `components/ui/`, Home/Tienda/PDP/Blog/Checkout rediseñados (47 archivos, +4712/−1842). |
@@ -100,12 +102,15 @@ Scripts: `dev`, `build`, `start`, `lint`.
 4. **`README.md`**: sigue siendo el boilerplate de `create-next-app`; pendiente documentación real del proyecto.
 5. **Assets sin referencias (candidatos a limpieza, verificado 0 usos):** `public/file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg` y los logos legacy de raíz `zoa_logo_dark.png` / `zoa_logo_white.png` (trackeados).
 6. **Rutas debug expuestas:** `app/api/debug-sheet` y `app/api/debug-skydropx` accesibles en producción; evaluar protección o retiro.
-7. **Verificación:** ejecutar `tsc`/`build`/QA de hidratación («0 warnings», §8.6 MASTER) tras cualquier cambio; última referencia verde es v4.3.
+7. **Verificación:** ejecutar `tsc`/`build`/QA de hidratación («0 warnings», §8.6 MASTER) tras cualquier cambio; última referencia verde: build 2026-09-17 con «Lo más vendido» (151 páginas).
+8. **Commit/push pendientes de «Lo más vendido»:** la feature está en working tree (5 archivos + `MASTER.md`); incluir ADR-07 en el mensaje.
+9. **Pedidos `CARMELI-` en la hoja `Ventas`:** otro proyecto/cuenta comparte la hoja y sus pedidos **sí se cuentan hoy**. Decidir si `getBestSellers` debe filtrar solo `ZOA-`/`TIENDA-` o mantener el conteo global.
+10. **`GOOGLE_SHEET_VENTAS` (opcional):** documentarla formalmente en la lista de env vars del proyecto; hoy se lee con default `Ventas` en `lib/googleSheets.ts`.
 
 ## 8. Fuentes de verdad
 
 1. **Design system:** `design-system/zoa-boutique/MASTER.md` (v4.3) + `design-system/zoa-boutique/pages/*.md`.
 2. **Código ejecutable:** `app/globals.css` (tokens/utilidades) y `components/ui/` (kit obligatorio para superficies nuevas).
-3. **Datos de catálogo:** Google Sheet, pestaña `Oficial` (columnas A–T), vía `lib/googleSheets.ts`.
+3. **Datos de catálogo:** Google Sheet, pestaña `Oficial` (columnas A–T) vía `lib/googleSheets.ts`; pestaña `Ventas` (log del Apps Script) solo para `getBestSellers`.
 4. **Repo remoto:** `origin` = GitHub `EduardoGonzalez26/Zoa-boutique` (rama `main`).
 5. **Este archivo:** contexto de continuidad entre sesiones; se actualiza al cierre de cada sesión con estado, ADRs y pendientes.

@@ -6,11 +6,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CartItem, Product, Size } from "@/lib/types";
+import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
 
 const VIP_CODE = "PROBADOR";
 const VIP_DEPOSIT_AMOUNT = 300; // MXN
-const SHIPPING_FLAT = 150;       // MXN
-const FREE_SHIPPING_THRESHOLD = 3000; // MXN
 
 type DrawerView = "cart" | "checkout";
 
@@ -18,8 +17,8 @@ interface CartState {
   // ── Data ──────────────────────────────────────────────────────────────────
   items: CartItem[];
   vipCode: string;
-  couponDiscount: number;   // % off (0-100)
-  couponType: string;       // "porcentaje" | "fijo" | "interno" | ""
+  couponDiscount: number; // % off (0-100)
+  couponType: string; // "porcentaje" | "fijo" | "interno" | ""
   isOpen: boolean;
   drawerView: DrawerView;
 
@@ -29,6 +28,7 @@ interface CartState {
   total: () => number;
   discountAmount: () => number;
   isVip: () => boolean;
+  isFreeShipping: () => boolean;
   itemCount: () => number;
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -59,10 +59,11 @@ export const useCartStore = create<CartState>()(
       subtotal: () =>
         get().items.reduce(
           (sum, item) => sum + item.product.price * item.quantity,
-          0
+          0,
         ),
 
       shipping: () => {
+        if (get().isFreeShipping()) return 0;
         const sub = get().subtotal();
         return sub >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
       },
@@ -70,18 +71,21 @@ export const useCartStore = create<CartState>()(
       discountAmount: () => {
         const pct = get().couponDiscount;
         if (!pct) return 0;
-        return Math.round(get().subtotal() * pct / 100);
+        return Math.round((get().subtotal() * pct) / 100);
       },
 
       total: () => {
         if (get().isVip()) return VIP_DEPOSIT_AMOUNT;
-        const sub  = get().subtotal();
+        const sub = get().subtotal();
         const disc = get().discountAmount();
-        return (sub - disc) + get().shipping();
+        return sub - disc + get().shipping();
       },
 
       isVip: () =>
         get().vipCode.trim().toUpperCase() === VIP_CODE,
+
+      isFreeShipping: () =>
+        get().vipCode.trim().toUpperCase() === FREE_SHIPPING_CODE,
 
       itemCount: () =>
         get().items.reduce((sum, item) => sum + item.quantity, 0),
@@ -91,7 +95,7 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const stockAvailable = product.stock?.[size] ?? 0;
           const existing = state.items.find(
-            (i) => i.product.id === product.id && i.size === size
+            (i) => i.product.id === product.id && i.size === size,
           );
           if (existing) {
             // Don't exceed stock
@@ -100,11 +104,11 @@ export const useCartStore = create<CartState>()(
               items: state.items.map((i) =>
                 i.product.id === product.id && i.size === size
                   ? { ...i, quantity: i.quantity + 1 }
-                  : i
+                  : i,
               ),
             };
           }
-          if (stockAvailable <= 0) return state;  // out of stock
+          if (stockAvailable <= 0) return state; // out of stock
           return { items: [...state.items, { product, size, quantity: 1 }] };
         });
       },
@@ -112,7 +116,7 @@ export const useCartStore = create<CartState>()(
       removeItem: (productId, size) => {
         set((state) => ({
           items: state.items.filter(
-            (i) => !(i.product.id === productId && i.size === size)
+            (i) => !(i.product.id === productId && i.size === size),
           ),
         }));
       },
@@ -124,25 +128,30 @@ export const useCartStore = create<CartState>()(
         }
         set((state) => {
           const item = state.items.find(
-            (i) => i.product.id === productId && i.size === size
+            (i) => i.product.id === productId && i.size === size,
           );
           // Cap at stock
-          const maxQty = item ? (item.product.stock?.[size as keyof typeof item.product.stock] ?? quantity) : quantity;
+          const maxQty = item
+            ? (item.product.stock?.[size as keyof typeof item.product.stock] ??
+              quantity)
+            : quantity;
           const capped = Math.min(quantity, maxQty);
           return {
             items: state.items.map((i) =>
               i.product.id === productId && i.size === size
                 ? { ...i, quantity: capped }
-                : i
+                : i,
             ),
           };
         });
       },
 
       setVipCode: (code) => set({ vipCode: code }),
-      setCouponDiscount: (pct, type) => set({ couponDiscount: pct, couponType: type }),
+      setCouponDiscount: (pct, type) =>
+        set({ couponDiscount: pct, couponType: type }),
 
-      clearCart: () => set({ items: [], vipCode: "", couponDiscount: 0, couponType: "" }),
+      clearCart: () =>
+        set({ items: [], vipCode: "", couponDiscount: 0, couponType: "" }),
 
       openCart: () => set({ isOpen: true, drawerView: "cart" }),
       closeCart: () => set({ isOpen: false }),
@@ -163,6 +172,6 @@ export const useCartStore = create<CartState>()(
         couponDiscount: state.couponDiscount,
         couponType: state.couponType,
       }),
-    }
-  )
+    },
+  ),
 );

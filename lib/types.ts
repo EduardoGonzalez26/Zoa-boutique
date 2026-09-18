@@ -36,6 +36,13 @@ export interface CartItem {
   quantity: number;
 }
 
+// Prenda más vendida (mega menú): producto del catálogo + su foto principal
+export interface BestSeller {
+  id: string;
+  name: string;
+  image: string;
+}
+
 export interface CheckoutBody {
   items: CartItem[];
   vipCode?: string;

@@ -7,6 +7,7 @@ import { Payment, initMercadoPago } from "@mercadopago/sdk-react";
 import { Lock } from "lucide-react";
 import { useCheckoutStore } from "@/store/checkoutStore";
 import { useCartStore } from "@/store/cartStore";
+import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
 import type { ShippingAddress } from "@/store/checkoutStore";
 import type { CartItem } from "@/lib/types";
 
@@ -34,7 +35,7 @@ const OVERLINE = "overline-forest";
 export default function CheckoutPage() {
   const router = useRouter();
   const { checkoutItems, vipCode, setAddress, clearCheckout } = useCheckoutStore();
-  const { items: cartItems, isVip, clearCart } = useCartStore();
+  const { items: cartItems, vipCode: cartVipCode, isVip, clearCart } = useCartStore();
 
   const [address, setLocalAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const [addressValid, setAddressValid] = useState(false);
@@ -46,8 +47,10 @@ export default function CheckoutPage() {
 
   // ── Compute totals ────────────────────────────────────────────────────────
   const subtotal = items.reduce((sum: number, ci: CartItem) => sum + ci.product.price * ci.quantity, 0);
-  const shipping = subtotal >= 3000 ? 0 : 150;
-  const vipActive = isVip() || vipCode === "PROBADOR";
+  const activeCode = (vipCode || cartVipCode).trim().toUpperCase();
+  const freeShippingCode = activeCode === FREE_SHIPPING_CODE;
+  const shipping = freeShippingCode || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
+  const vipActive = isVip() || activeCode === "PROBADOR";
   const total = vipActive ? 300 : subtotal + shipping;
 
   const formattedTotal = new Intl.NumberFormat("es-MX", {
@@ -80,7 +83,7 @@ export default function CheckoutPage() {
       const res = await fetch("/api/process-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formData, items, address, total, vipCode }),
+        body: JSON.stringify({ formData, items, address, total, vipCode: activeCode }),
       });
       const result = await res.json() as { status?: string; error?: string };
       if (!res.ok) throw new Error(result.error ?? "Error procesando pago");

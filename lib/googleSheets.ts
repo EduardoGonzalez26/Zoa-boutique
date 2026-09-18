@@ -14,9 +14,10 @@
 //  Q:DE FRENTE  R:CLOSE UP  S:DE LADO  T:DE ESPALDAS
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { CartItem, Product } from "./types";
+import type { BestSeller, CartItem, Product } from "./types";
 
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? "Oficial";
+const VENTAS_SHEET_NAME = process.env.GOOGLE_SHEET_VENTAS ?? "Ventas";
 
 function getSpreadsheetId(): string {
   const id = process.env.GOOGLE_SHEET_ID;
@@ -260,6 +261,95 @@ export async function getGroupedProductById(id: string): Promise<Product | null>
 export async function getProductById(id: string): Promise<Product | null> {
   const all = await getProducts();
   return all.find((p) => p.id === id) ?? null;
+}
+
+// ── Read (Best Sellers) ──────────────────────────────────────────────────────
+
+/**
+ * Fetches the "Ventas" tab (sales log written by the Apps Script).
+ *
+ * IMPORTANT: this tab is NOT the first sheet, and the /export?sheet= endpoint
+ * silently falls back to the first sheet for any non-first tab. The gviz
+ * endpoint DOES resolve tabs by name, so it is used here. If the tab is
+ * missing/renamed the fallback returns the "Oficial" header — we detect that
+ * and return [] so the UI keeps its static fallback.
+ */
+async function fetchVentasRows(): Promise<string[][]> {
+  const id = getSpreadsheetId();
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(VENTAS_SHEET_NAME)}`;
+
+  const res = await fetch(url, {
+    next: { revalidate: 300 }, // las ventas cambian con poca frecuencia
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google Sheets ventas fetch failed: ${res.status} ${res.statusText}`);
+  }
+
+  const rows = parseCSV(await res.text());
+  const header = (rows[0] ?? []).join(" ").toLowerCase();
+  const isVentas = header.includes("productos") && header.includes("fecha");
+  return isVentas ? rows.slice(1) : [];
+}
+
+/** Nombre comparable: minúsculas, sin acentos y con espacios colapsados. */
+function normalizeName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * Aggregates units sold per product name from the "Ventas" log.
+ * Items are stored as "Nombre (TALLA) xCant $precio" joined by " | ".
+ */
+function countSoldUnits(rows: string[][]): Map<string, number> {
+  const units = new Map<string, number>();
+
+  for (const row of rows) {
+    for (const cell of row) {
+      if (!cell || !cell.includes("(")) continue;
+      for (const part of cell.split("|")) {
+        const match = part.trim().match(/^(.+?)\s*\(([^)]+)\)\s*x(\d+)/);
+        if (!match) continue;
+        const qty = parseInt(match[3], 10) || 0;
+        if (qty <= 0) continue;
+        const key = normalizeName(match[1]);
+        units.set(key, (units.get(key) ?? 0) + qty);
+      }
+    }
+  }
+
+  return units;
+}
+
+/**
+ * Returns the best-selling products (most units sold) matched against the
+ * current catalog, ready for the navbar mega menú carousel.
+ * Products no longer in the catalog (or without a photo) are skipped.
+ */
+export async function getBestSellers(limit = 4): Promise<BestSeller[]> {
+  const [saleRows, catalog] = await Promise.all([fetchVentasRows(), getGroupedProducts()]);
+  if (saleRows.length === 0) return [];
+
+  const byName = new Map(catalog.map((p) => [normalizeName(p.name), p]));
+  const ranked = [...countSoldUnits(saleRows).entries()].sort((a, b) => b[1] - a[1]);
+
+  const best: BestSeller[] = [];
+  for (const [name] of ranked) {
+    const product = byName.get(name);
+    if (!product) continue;
+    const image = product.images[0] || product.variants?.find((v) => v.image)?.image;
+    if (!image) continue;
+
+    best.push({ id: product.id, name: product.name, image });
+    if (best.length >= limit) break;
+  }
+
+  return best;
 }
 
 
