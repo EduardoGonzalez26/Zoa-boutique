@@ -14,7 +14,7 @@ import type { CartItem } from "@/lib/types";
 //
 // ── MercadoPago Bricks Initialization (runs once, client-only) ─────────────
 //
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "";
+const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? "";
 
 if (MP_PUBLIC_KEY) {
   initMercadoPago(MP_PUBLIC_KEY, { locale: "es-MX" });

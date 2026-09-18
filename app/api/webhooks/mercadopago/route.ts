@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     // ── Trigger email notifications ────────────────────────────────────────
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://zoa.mx";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zoa.mx";
       await fetch(`${baseUrl}/api/webhooks/payment-success`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },

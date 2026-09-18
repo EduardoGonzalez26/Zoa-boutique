@@ -26,7 +26,7 @@ const bodoniModa = Bodoni_Moda({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "https://zoa.mx"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://zoa.mx"),
   title: { default: "Zoa — Moda Femenina | Boutique Online México", template: "%s | Zoa" },
   description: "Boutique de moda femenina con carácter. Blusas, vestidos, sacos, sweaters y más. Envíos a todo México. Pago seguro con Mercado Pago.",
   keywords: ["moda femenina", "boutique online", "ropa de mujer", "zoa", "blusas", "vestidos", "sweaters", "México"],

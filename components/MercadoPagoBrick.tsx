@@ -35,7 +35,7 @@ type MPModule = {
 };
 
 export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: MercadoPagoBrickProps) {
-  const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY as string;
+  const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "";
   const [mpModule, setMpModule] = useState<MPModule | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 

@@ -3,7 +3,7 @@
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 
 // Inicializar UNA sola vez, con locale correcto
-const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? '';
+const PUBLIC_KEY = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? '';
 if (PUBLIC_KEY) {
   initMercadoPago(PUBLIC_KEY, { locale: 'es-MX' });
 }
@@ -21,7 +21,7 @@ export default function MercadoPagoWrapper({ initialization, onSubmit }: Mercado
       <div className="rounded-xs border border-zoa-error p-4 text-center">
         <p className="font-sans text-sm text-zoa-error">
           MercadoPago no está configurado.<br />
-          <span className="text-xs">Agrega NEXT_PUBLIC_MP_PUBLIC_KEY en .env.local</span>
+          <span className="text-xs">Agrega NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY (o NEXT_PUBLIC_MP_PUBLIC_KEY) en las variables de entorno.</span>
         </p>
       </div>
     );

@@ -5,20 +5,21 @@
 //  3. On approval:
 //     a. Deducts stock from Google Sheets
 //     b. Logs sale to "Ventas" sheet
-//     c. Returns 200 to the user immediately
-//     d. In background (waitUntil): creates Skydropx shipment + pickup
-//        then sends transactional email with tracking number
+//     c. Creates the Skydropx shipment + pickup synchronously
+//     d. Returns 200 to the user immediately
+//     e. after(): sends the transactional email with tracking number once the
+//        response has been sent (works on self-hosted deploys, e.g. Railway)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import MercadoPagoConfig, { Payment } from "mercadopago";
-import { waitUntil } from "@vercel/functions";
 import type { CartItem } from "@/lib/types";
 import type { ShippingAddress } from "@/store/checkoutStore";
 import { deductStock, logSale } from "@/lib/googleSheets";
 import { createSkydropxShipment } from "@/lib/skydropx";
 
-// Extend function timeout to 60 s on Vercel Pro (background task needs this)
+// Vercel-only: extends the function timeout to 60 s on Vercel Pro.
+// Railway (self-hosted) ignores this export; its own server timeout applies.
 export const maxDuration = 60;
 
 let _client: MercadoPagoConfig | null = null;
@@ -180,7 +181,7 @@ export async function POST(req: NextRequest) {
       //    On Vercel Hobby, waitUntil has only ~5-10s which is NOT enough for
       //    the full Skydropx flow (token + quotation + polling + shipment + pickup).
       //    By doing it before the response, we ensure the pickup gets scheduled.
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://zoa.mx";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://zoa.mx";
 
       let trackingNumber: string | null = null;
       let labelUrl:       string | null = null;
@@ -211,28 +212,28 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // 4. Send email in background (waitUntil) — this is fast enough for Hobby
-      waitUntil(
-        (async () => {
-          try {
-            await fetch(`${baseUrl}/api/webhooks/payment-success`, {
-              method:  "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                paymentId: result.id,
-                status:    result.status,
-                items, address, total, vipCode,
-                orderId,
-                trackingNumber, labelUrl, carrier,
-                skydropxError,
-              }),
-            });
-            console.log("[process-payment] Email webhook triggered — trackingNumber:", trackingNumber, "error:", skydropxError);
-          } catch (e) {
-            console.error("[process-payment] Email trigger failed:", e);
-          }
-        })()
-      );
+      // 4. Send email after the response is sent. after() runs once the
+      //    response has finished and works on self-hosted deploys (Railway),
+      //    unlike the old Vercel-only waitUntil helper.
+      after(async () => {
+        try {
+          await fetch(`${baseUrl}/api/webhooks/payment-success`, {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              paymentId: result.id,
+              status:    result.status,
+              items, address, total, vipCode,
+              orderId,
+              trackingNumber, labelUrl, carrier,
+              skydropxError,
+            }),
+          });
+          console.log("[process-payment] Email webhook triggered — trackingNumber:", trackingNumber, "error:", skydropxError);
+        } catch (e) {
+          console.error("[process-payment] Email trigger failed:", e);
+        }
+      });
 
       return NextResponse.json({
         status:       result.status,

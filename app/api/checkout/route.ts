@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     // ── Create Preference ──────────────────────────────────────────────────────
     const preference = new Preference(mpClient);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? req.headers.get("origin") ?? "";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || req.headers.get("origin") || "";
 
     const created = await preference.create({
       body: {

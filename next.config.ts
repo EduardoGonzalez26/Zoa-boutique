@@ -19,6 +19,8 @@ const nextConfig: NextConfig = {
   // Expose only public env vars to the browser
   env: {
     NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "",
+    // La llave pública tiene dos nombres en el código: inyecta en ambos el valor disponible
+    NEXT_PUBLIC_MP_PUBLIC_KEY: process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "",
   },
 };
 
