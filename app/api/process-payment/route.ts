@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
           street:      address.street,
           numExterior: address.numExterior ?? "",
           numInterior: address.numInterior ?? "",
-          colonia:     (address as any).colonia ?? "",
+          colonia:     address.colonia ?? "",
           city:        address.city,
           state:       address.state,
           zip:         address.zip,

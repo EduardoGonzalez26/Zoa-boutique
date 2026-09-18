@@ -10,6 +10,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BASE = "https://api-pro.skydropx.com";
 
+// Minimal structural shape of a shipment in the Pro API list (diagnostic only).
+type SkydropxShipmentSummary = {
+  id?: string;
+  attributes?: {
+    carrier_name?: string;
+    workflow_status?: string;
+    source?: string;
+  };
+};
+
 export const maxDuration = 60;
 
 // Next business day in YYYY-MM-DD
@@ -121,9 +131,9 @@ export async function GET(req: NextRequest) {
     //     - carrier-specific (some work, some don't), or
     //     - account-wide (all return "via soporte" → need to call Skydropx)
     {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const shipments: any[] = (shipListData as any)?.data ?? [];
-      const byCarrier = new Map<string, any>();
+      const shipments: SkydropxShipmentSummary[] =
+        (shipListData as { data?: SkydropxShipmentSummary[] })?.data ?? [];
+      const byCarrier = new Map<string, SkydropxShipmentSummary>();
       for (const s of shipments) {
         const c = (s?.attributes?.carrier_name ?? "unknown").toLowerCase();
         // keep the most recent one per carrier (list is chronological asc)
@@ -137,7 +147,7 @@ export async function GET(req: NextRequest) {
       const perCarrier: Record<string, unknown> = {};
 
       for (const [carrier, ship] of byCarrier.entries()) {
-        const shipId: string = ship?.id;
+        const shipId: string | undefined = ship?.id;
         if (!shipId) continue;
 
         // (a) Coverage probe

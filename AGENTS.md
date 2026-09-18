@@ -25,13 +25,14 @@ E-commerce Next.js 16 (App Router) + React 19 + TypeScript strict + Tailwind v4 
 - `POST /api/vendido` is the physical-store sale path (stock + sale log, no payment/shipping).
 - `components/MercadoPagoBrick.tsx` and `app/api/shipping-rates/route.ts` have no callers (dead code); don't copy their patterns.
 
-## Shipping cost (no single source of truth)
-Flat $150 MXN, free ≥ $3,000; VIP code `PROBADOR` = $300 deposit. Hardcoded and duplicated — update all sites when changing:
-- `store/cartStore.ts:12` (mirrors `150`/`3000`)
-- `app/api/checkout/route.ts:16` (sent to MercadoPago as `shipments.cost`)
-- `app/checkout/page.tsx:49`
-- `app/api/webhooks/payment-success/route.ts:112`
-- `components/CartDrawer.tsx:17` (threshold only)
+## Shipping cost (single source of truth)
+`lib/shipping.ts` is the only source: `SHIPPING_FLAT = 150`, `FREE_SHIPPING_THRESHOLD = 3000`, `FREE_SHIPPING_CODE = "ENTREAMIGAS"` (MXN). Import from it; never re-hardcode. Consumers:
+- `store/cartStore.ts` — `shipping()` / `isFreeShipping()`; the code travels in `vipCode`, the same field as VIP code `PROBADOR` ($300 deposit, still separate).
+- `components/CartDrawer.tsx` — resolves `ENTREAMIGAS` locally (no `/api/validate-coupon`, nothing sent to Apps Script), one code at a time (no stacking with coupons/VIP), shows 100% progress bar + "— envío gratis" chip.
+- `app/checkout/page.tsx` — computes shipping and sends `vipCode: activeCode` to `/api/process-payment`.
+- `app/api/checkout/route.ts` — Checkout Pro: `isFreeShipping` zeroes `shipments.cost` without triggering the VIP deposit branch.
+- `app/api/webhooks/payment-success/route.ts` — receipt prints "Gratis".
+Editorial copy still hardcodes `$150` / `≥ $3,000` — update by hand if the constants change: `components/ProductGalleryClient.tsx:677`, `components/Footer.tsx:190`, `app/page.tsx:98,179`.
 
 ## UI rules (MASTER v4.3)
 - Tokens live in `app/globals.css` (`@theme static`); reuse `components/ui/` kit (Button, Reveal, ImageReveal, SectionHeader, Overline, Chip, Accordion, EmptyState, `useMounted`). No pure `#FFFFFF`; formulas: exactly 1 forest (`#003628`) full-bleed band per page, max 1 wine band.
@@ -41,5 +42,5 @@ Flat $150 MXN, free ≥ $3,000; VIP code `PROBADOR` = $300 deposit. Hardcoded an
 ## Traps
 - Debug routes are public in production: `/api/debug-sheet` and `/api/debug-skydropx?secret=zoa_debug` (hardcoded secret).
 - Known broken links still pending: `/colecciones/*` and `/checkout/pending` (see `MEMORIA.md` §7).
-- `.tmp-qa/` holds untracked Chrome QA artifacts; leave it out of commits unless asked.
+- `.tmp-qa/` holds local Chrome QA artifacts: ignored by git and ESLint since 2026-09-18 (`.gitignore` + `globalIgnores`); its 676 files were purged from `main` by rewriting `c1c7c27` (force-push with lease). Manual follow-ups (dangling GitHub objects, credential rotation) in `MEMORIA.md` §7.1.
 - `next.config.ts` allows remote images only from `res.cloudinary.com` (plus Unsplash fallback).

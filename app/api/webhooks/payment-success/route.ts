@@ -103,14 +103,14 @@ function buildCustomerEmail(params: {
   items: CartItem[];
   total: number;
   paymentId: string | number;
-  vipCode: string;
+  vipCode?: string;
   orderId?: string;
   trackingNumber?: string | null;
   carrier?: string | null;
 }): string {
   const { address, items, total, paymentId, vipCode, orderId, trackingNumber, carrier } = params;
   const subtotal = items.reduce((s, ci) => s + ci.product.price * ci.quantity, 0);
-  const shipping = vipCode.trim().toUpperCase() === FREE_SHIPPING_CODE || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
+  const shipping = (vipCode ?? "").trim().toUpperCase() === FREE_SHIPPING_CODE || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
   const isVip = vipCode === "PROBADOR";
 
   const trackingBlock = trackingNumber
@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
       items:           CartItem[];
       address:         ShippingAddress;
       total:           number;
-      vipCode:         string;
+      vipCode?:        string;
       orderId?:        string;
       trackingNumber?: string | null;
       labelUrl?:       string | null;
@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
       skydropxError?:  string | null;
     };
 
-    const { paymentId, status, items, address, total, vipCode, orderId,
+    const { paymentId, status, items, address, total, vipCode = "", orderId,
             trackingNumber, labelUrl, carrier, skydropxError } = body;
 
     if (!address?.email || !items?.length) {

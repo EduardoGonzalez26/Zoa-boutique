@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefactos locales de QA (perfil de Chrome), no son del proyecto:
+    ".tmp-qa/**",
   ]),
 ]);
 

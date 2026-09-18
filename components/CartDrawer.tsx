@@ -319,11 +319,11 @@ export default function CartDrawer() {
                         <Tag size={12} aria-hidden /> Código promo
                       </label>
 
-                      {vipCode && couponDiscount >= 0 && couponStatus === "ok" ? (
+                      {vipCode ? (
                         <div className="flex items-center justify-between border border-zoa-success px-3 py-2">
                           <span className="inline-flex items-center gap-2 font-sans text-[11px] font-medium text-zoa-success">
                             <Check size={12} aria-hidden />
-                            {vipCode}{couponType === "envio-gratis" ? " — envío gratis" : couponDiscount > 0 ? ` — ${couponDiscount}% off` : " — venta física"}
+                            {vipCode}{couponType === "envio-gratis" ? " — envío gratis" : couponType === "interno" ? " — venta física" : couponDiscount > 0 ? ` — ${couponDiscount}% off` : ""}
                           </span>
                           <button onClick={handleRemoveCoupon}
                             className="ml-3 cursor-pointer text-zoa-success transition-colors hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine"

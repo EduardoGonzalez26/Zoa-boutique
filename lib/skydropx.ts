@@ -109,6 +109,30 @@ interface SkydropxShipmentResult {
   pickupError:    string | null;  // Error if pickup scheduling failed
 }
 
+// ── Pro API shipment response shape (only the fields we read) ────────────────
+type SkydropxIncluded = {
+  type?: string;
+  attributes?: {
+    tracking_number?: string | null;
+    label_url?: string | null;
+  };
+};
+
+type SkydropxProResponse = {
+  data?: {
+    id?: string;
+    attributes?: {
+      master_tracking_number?: string | null;
+      tracking_number?: string | null;
+      label_url?: string | null;
+    };
+  };
+  included?: SkydropxIncluded[];
+  tracking_number?: string | null;
+  label_url?: string | null;
+  id?: string;
+};
+
 /**
  * Creates a Skydropx shipment:
  * 1. Gets OAuth token
@@ -301,18 +325,17 @@ export async function createSkydropxShipment(
   //   • tracking  → data.attributes.master_tracking_number  (NOT tracking_number)
   //   • label_url → included[type=package].attributes.label_url  (NOT data.attributes)
   //   • id        → data.id  (UUID string) ✅
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function extract(d: any) {
+  function extract(d: SkydropxProResponse) {
     const trackingNumber: string | null =
       d?.data?.attributes?.master_tracking_number          // ← real Pro API field
       ?? d?.data?.attributes?.tracking_number              // fallback legacy
-      ?? (d?.included as any[])?.find((i: any) => i.type === "package")
+      ?? d?.included?.find((i) => i.type === "package")
            ?.attributes?.tracking_number                   // fallback from included package
       ?? d?.tracking_number
       ?? null;
 
     // label_url lives in the included "package" object, not in shipment attributes
-    const pkg = (d?.included as any[])?.find((i: any) => i.type === "package");
+    const pkg = d?.included?.find((i) => i.type === "package");
     const labelUrl: string | null =
       pkg?.attributes?.label_url
       ?? d?.data?.attributes?.label_url                    // fallback
@@ -323,7 +346,7 @@ export async function createSkydropxShipment(
     return { trackingNumber, labelUrl, shipmentId };
   }
 
-  const initial = extract(shipData);
+  const initial = extract(shipData as SkydropxProResponse);
   let trackingNumber = initial.trackingNumber;
   let labelUrl       = initial.labelUrl;
   const shipmentId   = initial.shipmentId;
