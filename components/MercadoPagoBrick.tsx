@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { MP_PUBLIC_KEY } from "@/lib/mercadopagoPublicKey";
 import type { CartItem } from "@/lib/types";
 
 interface MercadoPagoBrickProps {
@@ -35,7 +36,6 @@ type MPModule = {
 };
 
 export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: MercadoPagoBrickProps) {
-  const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? "";
   const [mpModule, setMpModule] = useState<MPModule | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
@@ -43,14 +43,14 @@ export default function MercadoPagoBrick({ items, amount, onSuccess, onError }: 
     import("@mercadopago/sdk-react")
       .then((mod) => {
         // initMercadoPago must be called once, before any brick renders
-        mod.initMercadoPago(publicKey, { locale: "es-MX" });
+        mod.initMercadoPago(MP_PUBLIC_KEY, { locale: "es-MX" });
         setMpModule(mod as unknown as MPModule);
       })
       .catch((err: Error) => {
         console.error("[MercadoPagoBrick] SDK load failed:", err);
         onError?.(err);
       });
-  // Only run on mount — intentionally omit publicKey/onError from deps
+  // Only run on mount — intentionally omit onError from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -8,14 +8,13 @@ import { Lock } from "lucide-react";
 import { useCheckoutStore } from "@/store/checkoutStore";
 import { useCartStore } from "@/store/cartStore";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
+import { MP_PUBLIC_KEY } from "@/lib/mercadopagoPublicKey";
 import type { ShippingAddress } from "@/store/checkoutStore";
 import type { CartItem } from "@/lib/types";
 
 //
 // ── MercadoPago Bricks Initialization (runs once, client-only) ─────────────
 //
-const MP_PUBLIC_KEY = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY ?? process.env.NEXT_PUBLIC_MP_PUBLIC_KEY ?? "";
-
 if (MP_PUBLIC_KEY) {
   initMercadoPago(MP_PUBLIC_KEY, { locale: "es-MX" });
 }
