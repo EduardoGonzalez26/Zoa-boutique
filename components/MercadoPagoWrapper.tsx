@@ -18,6 +18,7 @@ interface MercadoPagoWrapperProps {
 
 export default function MercadoPagoWrapper({ initialization, onSubmit }: MercadoPagoWrapperProps) {
   const [brickError, setBrickError] = useState<string | null>(null);
+  const [brickReady, setBrickReady] = useState<boolean>(false);
 
   if (!MP_PUBLIC_KEY) {
     return (
@@ -94,11 +95,15 @@ export default function MercadoPagoWrapper({ initialization, onSubmit }: Mercado
             },
           }}
           onSubmit={onSubmit}
-          onError={() =>
-            setBrickError(
-              'No pudimos cargar el formulario de pago. Desactiva bloqueadores de anuncios o prueba en una ventana de incógnito / otro navegador.'
-            )
-          }
+          onReady={() => setBrickReady(true)}
+          onError={(error) => {
+            console.error('[MercadoPagoWrapper] Brick error:', error.type, error.cause);
+            if (error.type === 'critical' && !brickReady) {
+              setBrickError(
+                'No pudimos cargar el formulario de pago. Desactiva bloqueadores de anuncios o prueba en una ventana de incógnito / otro navegador.'
+              );
+            }
+          }}
           customization={{
             paymentMethods: {
               creditCard: 'all',
