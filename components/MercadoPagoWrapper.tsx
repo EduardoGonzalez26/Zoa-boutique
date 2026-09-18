@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { MP_PUBLIC_KEY } from '@/lib/mercadopagoPublicKey';
 
@@ -16,6 +17,8 @@ interface MercadoPagoWrapperProps {
 }
 
 export default function MercadoPagoWrapper({ initialization, onSubmit }: MercadoPagoWrapperProps) {
+  const [brickError, setBrickError] = useState<string | null>(null);
+
   if (!MP_PUBLIC_KEY) {
     return (
       <div className="rounded-xs border border-zoa-error p-4 text-center">
@@ -66,41 +69,52 @@ export default function MercadoPagoWrapper({ initialization, onSubmit }: Mercado
           pointer-events: auto !important;
         }
       `}</style>
-      <Payment
-        initialization={{
-          amount: initialization.amount,
-          payer: {
-            // Pre-fill email to suppress the email field in the brick
-            email: initialization.payer?.email ?? '',
-            // Pre-fill cardholder name via firstName/lastName.
-            // On iOS, the holder name input inside MP's iframe loses its value
-            // when the virtual keyboard causes scroll inside a fixed drawer.
-            // Result: empty cardholder_name → cc_rejected_bad_filled_other.
-            // Passing the name here makes the Brick auto-populate the field.
-            ...(initialization.payer?.name
-              ? {
-                  firstName: (initialization.payer.name as string).split(' ')[0] ?? '',
-                  lastName:  (initialization.payer.name as string).split(' ').slice(1).join(' ') || '.',
-                }
-              : {}),
-          },
-        }}
-        onSubmit={onSubmit}
-        customization={{
-          paymentMethods: {
-            creditCard: 'all',
-            debitCard: 'all',
-            ticket: 'all',
-            bankTransfer: 'all',
-            maxInstallments: 12,
-          },
-          visual: {
-            style: { theme: 'flat' },
-            hideFormTitle: true,
-            hidePaymentButton: false,
-          },
-        }}
-      />
+      {brickError ? (
+        <div className="rounded-xs border border-zoa-error p-4 text-center">
+          <p className="font-sans text-sm text-zoa-error">{brickError}</p>
+        </div>
+      ) : (
+        <Payment
+          initialization={{
+            amount: initialization.amount,
+            payer: {
+              // Pre-fill email to suppress the email field in the brick
+              email: initialization.payer?.email ?? '',
+              // Pre-fill cardholder name via firstName/lastName.
+              // On iOS, the holder name input inside MP's iframe loses its value
+              // when the virtual keyboard causes scroll inside a fixed drawer.
+              // Result: empty cardholder_name → cc_rejected_bad_filled_other.
+              // Passing the name here makes the Brick auto-populate the field.
+              ...(initialization.payer?.name
+                ? {
+                    firstName: (initialization.payer.name as string).split(' ')[0] ?? '',
+                    lastName:  (initialization.payer.name as string).split(' ').slice(1).join(' ') || '.',
+                  }
+                : {}),
+            },
+          }}
+          onSubmit={onSubmit}
+          onError={() =>
+            setBrickError(
+              'No pudimos cargar el formulario de pago. Desactiva bloqueadores de anuncios o prueba en una ventana de incógnito / otro navegador.'
+            )
+          }
+          customization={{
+            paymentMethods: {
+              creditCard: 'all',
+              debitCard: 'all',
+              ticket: 'all',
+              bankTransfer: 'all',
+              maxInstallments: 12,
+            },
+            visual: {
+              style: { theme: 'flat' },
+              hideFormTitle: true,
+              hidePaymentButton: false,
+            },
+          }}
+        />
+      )}
     </div>
   );
 }
