@@ -389,11 +389,16 @@ button, input, textarea, select {
 .link-underline:focus-visible::after { transform: scaleX(1); }
 
 /* ── Transición de página (app/template.tsx): fade + y 8px ── */
+/* `fill-mode: backwards` (NO `both`/`forwards`): al terminar, el efecto se
+   suelta y `.page-enter` queda sin transform; un fill forwards retiene la
+   matriz identidad (aunque sea `translateY(0)`), lo que convierte al template
+   en containing block y desancla del viewport a los `position: fixed` de la
+   página (barra sticky del PDP, modales). */
 @keyframes zoa-page-enter {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.page-enter { animation: zoa-page-enter 0.42s var(--ease-out-expo) both; }
+.page-enter { animation: zoa-page-enter 0.42s var(--ease-out-expo) backwards; }
 
 /* ── Reveal de imagen: máscara clip-path + zoom ── */
 .img-reveal {

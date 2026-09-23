@@ -173,7 +173,7 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 | Reveal de entrada (`Reveal`) | `opacity 0→1` · `y 28→0` · **700ms** · expo · viewport `once`, margen -80px |
 | Stagger | **70ms** por paso; `offset` se limita a **8** (máx. 560ms) |
 | Reveal de imagen (`.img-reveal` / `ImageReveal`) | `clip-path inset(10% 0 0 0) → inset(0)` + escala **1.06→1** · **950ms** · expo |
-| Transición de página (`app/template.tsx`) | **CSS puro** (`.page-enter` + `@keyframes zoa-page-enter`, `both`): `opacity 0→1` · `y 8→0` · 420ms · expo; `prefers-reduced-motion` la neutraliza en `globals.css` (§8.2) |
+| Transición de página (`app/template.tsx`) | **CSS puro** (`.page-enter` + `@keyframes zoa-page-enter`, `backwards`): `opacity 0→1` · `y 8→0` · 420ms · expo; `prefers-reduced-motion` la neutraliza en `globals.css` (§8.2) |
 | Hover estándar | **240ms** · `--ease-std` (color de botón, opacidad, retirada del FAB) |
 | Subrayado `.link-underline` | `scaleX 0→1` · 240ms · `--ease-out-quint` |
 | Zoom de imagen de card | `scale(1.03–1.04)` · 650–700ms · expo, contenedor `overflow-hidden` |
@@ -204,15 +204,15 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 
 ### 6.0 Navbar (global, `Navbar.tsx`) — reestructurado en v4.2
 
-- **Fila superior real**: Logo (`logozoa.svg` enmascarado con `.zoa-logo` sobre `--nc`/`--nc-hover`; 71×22 px < lg, 84×26 px ≥ lg) · **Inicio · Colecciones ▾ · Categorías ▾ · Tienda ▾** · lupa · bolsa. **Blog y Rastrear envío ya NO están en la fila**: viven dentro del grupo **Tienda** (mega menú desktop y drawer móvil).
+- **Fila superior real**: Logo (`logozoa.svg` enmascarado con `.zoa-logo` sobre `--nc`/`--nc-hover`; **sólido** 71×22 px < lg y 84×26 px ≥ lg; con **navbar transparente** —home sin scroll y sin paneles— crece a 84×26 px < lg y 97×30 px ≥ lg) · **Inicio · Colecciones ▾ · Categorías ▾ · Tienda ▾** · lupa · bolsa. **Blog y Rastrear envío ya NO están en la fila**: viven dentro del grupo **Tienda** (mega menú desktop y drawer móvil).
 - **Barra de anuncio** (arena, marquee 38s, rombos hairline forest) que colapsa a `h-0` al scroll; **barra de progreso de scroll 1px forest** en el borde superior (reduced-motion: `forest/35` estático).
 - **Estados de tinta**: sobre el hero de la home sin scroll y sin paneles, off-white (`--nc`, hover off-white/72); nav sólido (`data-scrolled`, `data-panel` o página interna), slate con **hover forest** (`--nc-hover`). Un panel desplegado (mega menú o búsqueda) siempre pinta la navbar sólida —nunca queda sobre una navbar transparente— y `Navbar.tsx` escribe `--nc`/`--nc-hover` inline desde un único booleano `solidNav`. Un script inline en `layout.tsx` fija `data-home`/`--nc` antes de la hidratación.
-- **Un solo panel full-bleed `#mega-menu`** (off-white, `hidden` bajo `md`) que renderiza **solo el grupo activo** (`OpenMenu = "collections" | "categories" | "shop"`); `motion.div key={openMenu}` con fade de 180ms **sin `mode="wait"`**; el chevron rota solo el trigger activo; `role="region"` + `aria-label` por menú; abre con `onMouseEnter`, alterna por click (touch/teclado) y cierra con Escape, click-outside o al salir del header con el puntero; títulos con `.rule-forest`; links con hover forest.
-  - **Colecciones**: lista 01–05 + **"Lo más vendido"** en `xl` con `link-arrow`. El bloque muestra un **crossfade de las 4 prendas más vendidas** (foto principal del catálogo, enlace al PDP, avance cada 4 s; estático con reduced motion o una sola prenda) calculadas por `getBestSellers()` (`lib/googleSheets.ts`) desde la pestaña **Ventas** y pasadas como prop server-side desde `layout.tsx`. Sin datos cae al poster del clip `two-models-walking` (cloud `ppo6ze2s`).
-  - **Categorías**: grid de 3 columnas + CTA.
+- **Un solo panel full-bleed `#mega-menu`** (off-white, `hidden` bajo `md`) que renderiza **solo el grupo activo** (`OpenMenu = "collections" | "categories" | "shop"`); `motion.div key={openMenu}` con fade de 180ms **sin `mode="wait"`**; el chevron rota solo el trigger activo; `role="region"` + `aria-label` por menú; abre con `onMouseEnter`, alterna por click (touch/teclado) y cierra con Escape, click-outside o al salir del header con el puntero; títulos con `.rule-forest`; links con **hairline propia (`border-b` solo en `MEGA_LINK`/links, nunca en el `li`) + hover tenue `slate/5`** y viraje a forest.
+  - **Colecciones**: lista 01–05 + **"Lo más vendido"** en `xl` con `link-arrow`. El bloque muestra un **crossfade de las 4 prendas más vendidas** (foto principal del catálogo, enlace al PDP, avance cada 4 s; estático con reduced motion o una sola prenda) calculadas por `getBestSellers()` (`lib/googleSheets.ts`) desde la pestaña **Ventas** y pasadas como prop desde `layout.tsx`. Sin datos cae al poster del clip `two-models-walking` (cloud `ppo6ze2s`).
+  - **Categorías**: grid de 3 columnas con gutter real `md:gap-x-6` (cada hairline queda como segmento propio) + CTA.
   - **Tienda**: 4 enlaces en 2 columnas (Todos los productos, Blog, Cambios y devoluciones, Rastrear envío) + bloque `xl` "Atención personalizada" (WhatsApp / teléfono / Instagram).
 - **Bolsa**: badge forest solo en móvil (`md:hidden`, "99+" si >99) y label "Bolsa (N)" en desktop; la lupa abre el panel de búsqueda (focos slate, sin forest).
-- **Drawer móvil espejo** full-screen off-white: búsqueda → Inicio (numeral 01 forest) → Colecciones (numerales forest) → Categorías (2 columnas) → Tienda → contacto, con hovers forest.
+- **Drawer móvil espejo** full-screen off-white: búsqueda → Inicio (numeral 01 forest) → Colecciones (numerales forest) → Categorías (2 columnas con `gap-x-4`) → Tienda → contacto, con hovers forest de fondo tenue `slate/5`.
 
 ### 6.1 Home — 9 bloques (`app/page.tsx`)
 
@@ -319,7 +319,7 @@ Fix v4.3: se eliminaron los warnings de hidratación derivados de framer-motion 
 ### 8.2 Transición de página: CSS puro (prohibido JS)
 
 - `app/template.tsx` renderiza `<div className="page-enter">` y ya no es componente cliente.
-- `app/globals.css`: `@keyframes zoa-page-enter` (`opacity 0→1`, `translateY(8px→0)`) y `.page-enter { animation: zoa-page-enter 0.42s var(--ease-out-expo) both; }`.
+- `app/globals.css`: `@keyframes zoa-page-enter` (`opacity 0→1`, `translateY(8px→0)`) y `.page-enter { animation: zoa-page-enter 0.42s var(--ease-out-expo) backwards; }`. El fill es `backwards` (NO `both`/`forwards`) a propósito: un fill forwards retiene la matriz identidad y convierte a `.page-enter` en containing block, lo que desancla del viewport a los descendientes `position: fixed` de la página (barra sticky del PDP, modales) — no volver a `both`.
 - El bloque `@media (prefers-reduced-motion: reduce)` la neutraliza: `.page-enter { animation: none !important; }`.
 - Prohibido volver a resolverla con `useReducedMotion` en JS: framer-motion captura `initial`/`transition` al montar y un flip post-mount **no cancela** la animación ya iniciada (el usuario RM seguía viendo el fade).
 

@@ -83,7 +83,7 @@ export default async function ProductPage({
 
   return (
     // data-product-name is read by WhatsAppButton for smart context
-    <div className="min-h-screen pt-24 md:pt-28" data-product-name={product.name}>
+    <div className="min-h-screen pt-28 md:pt-36" data-product-name={product.name}>
       <ProductGalleryClient product={product} allProducts={allProducts} />
     </div>
   );

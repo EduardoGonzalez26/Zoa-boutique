@@ -46,8 +46,11 @@ const EASE = [0.16, 1, 0.3, 1] as const;
 const NAV_ITEM =
   "relative inline-flex cursor-pointer items-center gap-1.5 py-4 font-sans text-[11px] font-normal uppercase tracking-[0.22em] text-[color:var(--nc)] transition-colors duration-200 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current";
 
+// Opción de submenú (desktop): hairline propia + hover tenue (slate/5) con viraje a forest.
+// La hairline vive SOLO aquí (no en el `li`): evita líneas dobles y hace consistente
+// el segmento con los paneles Colecciones y Tienda.
 const MEGA_LINK =
-  "group flex cursor-pointer items-center justify-between border-b border-zoa-line py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate";
+  "group flex cursor-pointer items-center justify-between border-b border-zoa-line py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-slate";
 
 // v4.1 · Título de columna del mega menú / drawer: regla corta forest sobre Bodoni
 const MENU_TITLE_RULE = "rule-forest mb-3";
@@ -276,7 +279,18 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
               aria-label="Zoa — Inicio"
               className="block cursor-pointer text-[color:var(--nc)] transition-colors duration-300 hover:text-[color:var(--nc-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
             >
-              <span aria-hidden className="zoa-logo h-[22px] w-[71px] lg:h-[26px] lg:w-[84px]" />
+              {/* Logo: crece con la navbar transparente (home sin scroll y sin panel)
+                  y conserva el tamaño actual cuando la navbar es sólida. Ambas tallas
+                  respetan la proporción 1485:460 ≈ 3.228; el ancho/alto se animan
+                  (300 ms, duración vigente del navbar) sin `scale` para no ablandar la máscara. */}
+              <span
+                aria-hidden
+                className={`zoa-logo transition-[width,height] duration-300 ${
+                  solidNav
+                    ? "h-[22px] w-[71px] lg:h-[26px] lg:w-[84px]"
+                    : "h-[26px] w-[84px] lg:h-[30px] lg:w-[97px]"
+                }`}
+              />
             </Link>
           </div>
 
@@ -471,17 +485,14 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                   <div>
                     <span aria-hidden className={MENU_TITLE_RULE} />
                     <p className="font-display text-xl leading-none text-zoa-slate">Categorías</p>
-                    <ul className="m-0 mt-5 grid list-none grid-cols-1 border-t border-zoa-line p-0 md:grid-cols-3">
-                      <li className="list-none border-b border-zoa-line pr-6">
+                    <ul className="m-0 mt-5 grid list-none grid-cols-1 border-t border-zoa-line p-0 md:grid-cols-3 md:gap-x-6">
+                      <li className="list-none">
                         <Link href="/tienda" onClick={closeAll} className={MEGA_LINK}>
                           Ver todo
                         </Link>
                       </li>
-                      {CATEGORIES.map((cat, i) => (
-                        <li
-                          key={cat}
-                          className={`list-none border-b border-zoa-line ${(i + 1) % 3 !== 2 ? "pr-6" : ""}`}
-                        >
+                      {CATEGORIES.map((cat) => (
+                        <li key={cat} className="list-none">
                           <Link
                             href={`/tienda?categoria=${encodeURIComponent(cat)}`}
                             onClick={closeAll}
@@ -672,7 +683,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                     <Link
                       href="/"
                       onClick={closeAll}
-                      className="flex items-baseline gap-4 px-5 py-5 font-sans text-2xl font-light tracking-[-0.02em] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
+                      className="flex items-baseline gap-4 px-5 py-5 font-sans text-2xl font-light tracking-[-0.02em] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                     >
                       <span className="font-sans text-[10px] tracking-[0.2em] text-zoa-forest tabular">01</span>
                       Inicio
@@ -690,7 +701,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                         <Link
                           href={`/tienda?coleccion=${encodeURIComponent(c.slug)}`}
                           onClick={closeAll}
-                          className="flex min-h-11 items-center justify-between py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest"
+                          className="flex min-h-11 items-center justify-between py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                         >
                           {c.label}
                           <span className="font-sans text-[10px] tracking-[0.16em] text-zoa-forest tabular">
@@ -706,18 +717,18 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                 <motion.div variants={rm ? undefined : drawerItem} className="px-5 pt-8">
                   <span aria-hidden className={MENU_TITLE_RULE} />
                   <p className="font-display text-lg leading-none text-zoa-slate">Categorías</p>
-                  <ul className="m-0 mt-3 grid list-none grid-cols-2 border-t border-zoa-line p-0">
-                    <li className="list-none border-b border-zoa-line pr-4">
-                      <Link href="/tienda" onClick={closeAll} className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest">
+                  <ul className="m-0 mt-3 grid list-none grid-cols-2 gap-x-4 border-t border-zoa-line p-0">
+                    <li className="list-none border-b border-zoa-line">
+                      <Link href="/tienda" onClick={closeAll} className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest">
                         Ver todo
                       </Link>
                     </li>
-                    {CATEGORIES.map((cat, i) => (
-                      <li key={cat} className={`list-none border-b border-zoa-line ${i % 2 === 0 ? "pr-4" : ""}`}>
+                    {CATEGORIES.map((cat) => (
+                      <li key={cat} className="list-none border-b border-zoa-line">
                         <Link
                           href={`/tienda?categoria=${encodeURIComponent(cat)}`}
                           onClick={closeAll}
-                          className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest"
+                          className="flex min-h-11 items-center py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                         >
                           {cat}
                         </Link>
@@ -739,7 +750,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={closeAll}
-                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
+                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                           >
                             {link.label}
                           </a>
@@ -747,7 +758,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                           <Link
                             href={link.href}
                             onClick={closeAll}
-                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
+                            className="flex min-h-11 items-center py-3 font-sans text-[14px] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 hover:text-zoa-forest focus-visible:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-zoa-forest"
                           >
                             {link.label}
                           </Link>

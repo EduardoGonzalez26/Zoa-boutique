@@ -128,7 +128,8 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
       <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-0 px-0 lg:grid-cols-12 lg:gap-10 lg:px-10 xl:px-20">
 
         {/* ── Galería ── */}
-        <div className="lg:col-span-7">
+        {/* pb: aire bajo la foto principal (24 móvil antes del panel, 48 desktop como cierre) */}
+        <div className="pb-6 lg:col-span-7 lg:pb-12">
           {/* Móvil: slider scroll-snap + contador */}
           <div className="relative w-full lg:hidden">
             <div className="relative aspect-[4/5] w-full bg-zoa-surface">
