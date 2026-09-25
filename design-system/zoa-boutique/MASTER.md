@@ -388,4 +388,4 @@ Cualquier componente de animación debe pasar la batería «**0 warnings de hidr
 
 Cada superficie documenta sus desviaciones concretas respecto a este MASTER en `design-system/zoa-boutique/pages/`:
 
-- `home.md` · `tienda.md` · `producto.md` · `checkout.md` · `blog.md`
+- `home.md` · `tienda.md` · `producto.md` · `checkout.md` · `blog.md` · `404.md`
