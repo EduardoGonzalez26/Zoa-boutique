@@ -21,10 +21,12 @@ function getResend(): Resend {
   return _resend;
 }
 
-const ADMIN_EMAILS = ["carmen@zoa.mx", "zoa6521@gmail.com", "jgegmz@gmail.com"];
+const ADMIN_EMAILS = ["carmen@carmeli.mx", "carmeli6521@gmail.com", "jgegmz@gmail.com"];
 // Configurable para poder enviar desde un dominio verificado en Resend
 // (p. ej. mientras zoa.mx termina de verificarse).
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "Zoa <hola@zoa.mx>";
+// Las respuestas de las clientas llegan a estos buzones.
+const REPLY_TO = ["carmen@carmeli.mx", "carmeli6521@gmail.com", "jgegmz@gmail.com"];
 
 // El SDK de Resend (v6) NO lanza en errores de API: resuelve { data, error },
 // por lo que allSettled marca los envíos como "fulfilled" aunque fallen.
@@ -297,12 +299,14 @@ export async function POST(req: NextRequest) {
       getResend().emails.send({
         from: FROM_EMAIL,
         to: [address.email],
+        replyTo: REPLY_TO,
         subject: `🎀 Confirmación de compra Zoa · #${paymentId}`,
         html: buildCustomerEmail({ address, items, total, paymentId, vipCode, orderId, trackingNumber, carrier }),
       }),
       getResend().emails.send({
         from: FROM_EMAIL,
         to: ADMIN_EMAILS,
+        replyTo: address.email,
         subject: `🛍️ Nuevo pedido · ${address.fullName} · ${fmt(total)} · ${orderId ?? `#${paymentId}`}`,
         html: buildAdminEmail({ address, items, total, paymentId, vipCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError }),
       }),

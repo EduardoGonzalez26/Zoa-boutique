@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       const from = process.env.RESEND_FROM_EMAIL ?? "Zoa <hola@zoa.mx>";
       await resend.emails.send({
         from,
-        to:   ["carmen@zoa.mx", "zoa6521@gmail.com"],
+        to:   ["carmen@carmeli.mx", "carmeli6521@gmail.com", "jgegmz@gmail.com"],
         subject: `⭐ Nueva reseña en ${productName ?? productId}`,
         html: `
           <div style="font-family:sans-serif;max-width:500px;margin:auto;border:1px solid #eee;padding:24px;">
