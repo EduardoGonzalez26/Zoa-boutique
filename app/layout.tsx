@@ -42,6 +42,13 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: "Zoa — Moda Femenina", description: "Boutique de moda femenina · Envíos a todo México." },
   alternates: { canonical: "https://zoa.mx" },
   robots: { index: true, follow: true },
+  icons: {
+    // Solo SVG: Chrome prefiere el .ico si ambos se declaran y pierde la
+    // variante dark del SVG. /favicon.ico queda en public/ como fallback
+    // directo para Safari/legacy (ADR-12).
+    icon: [{ url: "/favicon_zoa.svg", type: "image/svg+xml", sizes: "any" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
