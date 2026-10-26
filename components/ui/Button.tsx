@@ -50,7 +50,7 @@ const VARIANT: Record<Exclude<ButtonVariant, "link-arrow">, string> = {
   primary:
     "bg-zoa-forest text-zoa-surface hover:bg-zoa-forest-dark focus-visible:ring-zoa-forest",
   outline:
-    "border border-zoa-forest-35 bg-transparent text-zoa-forest hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:ring-zoa-forest",
+    "border border-zoa-forest-55 bg-transparent text-zoa-forest hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:ring-zoa-forest",
   "ghost-inverse":
     "border border-zoa-surface/60 bg-transparent text-zoa-surface hover:border-zoa-surface hover:bg-zoa-surface/10 focus-visible:ring-zoa-surface",
   inverse:
@@ -60,7 +60,7 @@ const VARIANT: Record<Exclude<ButtonVariant, "link-arrow">, string> = {
 /**
  * Botón/link editorial v4.1. Variantes:
  * - `primary`       → forest, acción principal ("Añadir a la bolsa", pagar)
- * - `outline`       → borde forest-35 + texto forest → invierte a forest al hover
+ * - `outline`       → borde forest-55 (≥3:1, WCAG 1.4.11) + texto forest → invierte a forest al hover
  * - `ghost-inverse` → borde off-white/60 sobre imagen o banda oscura
  * - `inverse`       → fondo off-white + texto forest (sobre banda slate/forest/wine)
  * - `link-arrow`    → texto + flecha forest que se desplaza al hover

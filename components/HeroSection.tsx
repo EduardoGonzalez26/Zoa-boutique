@@ -312,11 +312,12 @@ export default function HeroSection() {
         {/* Capa 1 — velo plano al 30% sobre toda la escena */}
         <div aria-hidden className="absolute inset-0 z-20 bg-[rgba(43,60,66,0.30)]" />
 
-        {/* Capa 2 — refuerzo al 55% en la mitad inferior, difuminado con máscara
-            (misma tinta slate; sin degradados de color) */}
+        {/* Capa 2 — refuerzo al 62% en la mitad inferior, difuminado con máscara
+            (misma tinta slate; sin degradados de color). Sube un paso respecto a
+            v4.2 (55%) para asegurar el contraste del titular/copy sobre video. */}
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 z-20 h-[64%] bg-[rgba(43,60,66,0.55)]"
+          className="absolute inset-x-0 bottom-0 z-20 h-[64%] bg-[rgba(43,60,66,0.62)]"
           style={{
             maskImage: "linear-gradient(to top, #000 58%, transparent 100%)",
             WebkitMaskImage: "linear-gradient(to top, #000 58%, transparent 100%)",

@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, CreditCard, CheckCircle2, Check, MapPin, Package, Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -11,12 +12,17 @@ import type { CartItem } from "@/lib/types";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Overline from "@/components/ui/Overline";
+import useFocusTrap from "@/components/ui/useFocusTrap";
 
 // ── MercadoPagoWrapper loaded client-side only (prevents SSR hydration error) ───
 const MercadoPagoWrapper = dynamic(() => import('@/components/MercadoPagoWrapper'), { ssr: false });
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(n);
+
+/** Enlaces legales dentro del microcopy de consentimiento. */
+const LEGAL_LINK =
+  "underline underline-offset-2 transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest";
 
 /** Payload mínimo del Brick de Mercado Pago que viaja al API tal cual. */
 type BrickFormData = Record<string, unknown>;
@@ -33,7 +39,7 @@ export default function CartDrawer() {
   const {
     items, vipCode, isOpen, drawerView,
     subtotal, shipping, total, isVip, isFreeShipping,
-    couponDiscount, couponType, discountAmount,
+    couponDiscount, couponType, couponScope, discountAmount,
     removeItem, updateQuantity, setVipCode, setCouponDiscount,
     closeCart, setDrawerView, clearCart,
   } = useCartStore();
@@ -43,11 +49,13 @@ export default function CartDrawer() {
   const [couponStatus, setCouponStatus] = useState<"idle"|"loading"|"ok"|"error">("idle");
   const [shippingData, setShippingData] = useState<ShippingData>(EMPTY_SHIPPING);
   const [addressSelected, setAddressSelected] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [error, setError]         = useState<string | null>(null);
   const [showBrick, setShowBrick] = useState(false);
   const [paying, setPaying]       = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
 
   const handleApplyCode = async () => {
     const code = promoCode.trim().toUpperCase();
@@ -63,7 +71,7 @@ export default function CartDrawer() {
     // Secret free-shipping code — resolved locally, never sent to Apps Script
     if (code === FREE_SHIPPING_CODE) {
       setVipCode(code);
-      setCouponDiscount(0, "envio-gratis");
+      setCouponDiscount(0, "envio-gratis", "all");
       setCouponMsg("Código aplicado — envío gratis");
       setCouponStatus("ok");
       return;
@@ -77,10 +85,14 @@ export default function CartDrawer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
       });
-      const data = await res.json() as { ok: boolean; type?: string; discount?: number; error?: string; code?: string };
+      const data = await res.json() as { ok: boolean; type?: string; discount?: number; error?: string; code?: string; scope?: string };
       if (data.ok) {
         setVipCode(code);
-        setCouponDiscount(data.discount ?? 0, data.type ?? "");
+        setCouponDiscount(
+          data.discount ?? 0,
+          data.type ?? "",
+          data.scope === "eligible" ? "eligible" : "all",
+        );
         if (data.type === "interno") {
           setCouponMsg("Cupón VENDIDO activo — venta física");
         } else {
@@ -90,7 +102,7 @@ export default function CartDrawer() {
       } else {
         setCouponStatus("error");
         setCouponMsg(data.error ?? "Cupón no válido");
-        setCouponDiscount(0, "");
+        setCouponDiscount(0, "", "all");
       }
     } catch {
       setCouponStatus("error");
@@ -100,7 +112,7 @@ export default function CartDrawer() {
 
   const handleRemoveCoupon = () => {
     setVipCode("");
-    setCouponDiscount(0, "");
+    setCouponDiscount(0, "", "all");
     setPromoCode("");
     setCouponMsg(null);
     setCouponStatus("idle");
@@ -112,6 +124,7 @@ export default function CartDrawer() {
   const discountVal = discountAmount ? discountAmount() : 0;
   const isVendido   = vipCode === 'VENDIDO' && couponType === 'interno';
   const finalTotal  = vipActive ? 300 : total();
+  const hasDiscountedItems = items.some((item) => (item.product.discount ?? 0) > 0);
 
   // ── VENDIDO: direct stock deduction, no payment/shipping ──────────────
   const [vendidoLoading, setVendidoLoading] = useState(false);
@@ -145,13 +158,17 @@ export default function CartDrawer() {
     if (!shippingData.name.trim()) { setFormError("Por favor ingresa tu nombre."); return false; }
     if (!shippingData.email.trim() || !/\S+@\S+\.\S+/.test(shippingData.email)) { setFormError("Correo electrónico inválido."); return false; }
     if (!shippingData.phone.trim()) { setFormError("Por favor ingresa tu teléfono."); return false; }
-    if (!addressSelected || !shippingData.address.trim()) { setFormError("Selecciona una dirección de las sugerencias."); return false; }
+    if (!shippingData.address.trim()) { setFormError("Por favor ingresa tu dirección."); return false; }
     if (!shippingData.numExterior.trim()) { setFormError("Por favor ingresa el número exterior."); return false; }
     setFormError(null);
     return true;
   };
 
   const handleGoToPayment = () => {
+    if (!accepted) {
+      setFormError("Para continuar acepta el Aviso de Privacidad y los Términos y Condiciones.");
+      return;
+    }
     if (!validateForm()) return;
     setError(null);   // clear any error from a previous payment attempt
     setPaying(false);
@@ -160,8 +177,12 @@ export default function CartDrawer() {
 
   const handleClose = () => {
     closeCart();
-    setTimeout(() => { setDrawerView("cart"); setShowBrick(false); setFormError(null); setError(null); setAddressSelected(false); setShippingData(EMPTY_SHIPPING); }, 400);
+    setTimeout(() => { setDrawerView("cart"); setShowBrick(false); setFormError(null); setError(null); setAccepted(false); setAddressSelected(false); setShippingData(EMPTY_SHIPPING); }, 400);
   };
+
+  // Diálogo del drawer: foco inicial, trap de Tab, Escape, scroll lock y
+  // devolución del foco al abridor.
+  useFocusTrap(isOpen, drawerRef, handleClose);
 
   const InputCls = "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3 py-2.5 font-sans text-sm text-zoa-slate placeholder:text-zoa-slate-60 transition-colors focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
 
@@ -183,6 +204,11 @@ export default function CartDrawer() {
 
           {/* Drawer — bottom sheet en móvil, altura completa en escritorio */}
           <motion.aside key="drawer"
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cart-drawer-title"
+            tabIndex={-1}
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
@@ -211,14 +237,14 @@ export default function CartDrawer() {
                     {itemCountTotal > 0 && (
                       <>
                         {" · "}
-                        <span className="tabular text-zoa-forest">
+                        <span className="tabular text-zoa-forest" aria-live="polite">
                           {itemCountTotal} {itemCountTotal === 1 ? "pieza" : "piezas"}
                         </span>
                       </>
                     )}
                   </Overline>
                 )}
-                <h2 className="font-display text-2xl leading-none tracking-[-0.02em] text-zoa-slate">
+                <h2 id="cart-drawer-title" className="font-display text-2xl leading-none tracking-[-0.02em] text-zoa-slate">
                   {drawerView === "checkout" ? "Datos de envío" : "Tu selección"}
                 </h2>
               </div>
@@ -239,7 +265,7 @@ export default function CartDrawer() {
                         <ShoppingBag size={32} strokeWidth={1} aria-hidden className="text-zoa-forest" />
                         <p className="font-display text-xl italic text-zoa-slate">Tu bolsa está vacía</p>
                         <button
-                          onClick={handleClose}
+                          onClick={() => { handleClose(); router.push("/tienda"); }}
                           className="link-underline cursor-pointer font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
                         >
                           Explorar la tienda
@@ -254,7 +280,7 @@ export default function CartDrawer() {
                           {/* Miniatura 4/5 — placeholder #FFF7F5 */}
                           <div className="relative aspect-[4/5] w-20 flex-shrink-0 overflow-hidden bg-zoa-surface">
                             {item.product.images[0] && (
-                              <Image src={item.product.images[0]} alt={item.product.name} fill className="object-cover" sizes="80px" />
+                              <Image src={item.product.images[0]} alt="" fill className="object-cover" sizes="80px" />
                             )}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -267,16 +293,16 @@ export default function CartDrawer() {
                             {/* Steppers hairline 44px */}
                             <div className="mt-3 flex items-center gap-2">
                               <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
-                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label="Reducir cantidad">
+                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label={`Reducir cantidad de ${item.product.name}, talla ${item.size}`}>
                                 <Minus size={12} aria-hidden />
                               </button>
                               <span className="w-6 text-center font-sans text-sm text-zoa-slate tabular">{item.quantity}</span>
                               <button onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
-                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label="Aumentar cantidad">
+                                className="flex h-11 w-11 cursor-pointer items-center justify-center border border-zoa-line-strong text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate" aria-label={`Aumentar cantidad de ${item.product.name}, talla ${item.size}`}>
                                 <Plus size={12} aria-hidden />
                               </button>
                               <button onClick={() => removeItem(item.product.id, item.size)}
-                                className="ml-auto flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine" aria-label="Eliminar pieza">
+                                className="ml-auto flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine" aria-label={`Eliminar ${item.product.name}, talla ${item.size}`}>
                                 <Trash2 size={14} strokeWidth={1.4} aria-hidden />
                               </button>
                             </div>
@@ -341,13 +367,27 @@ export default function CartDrawer() {
                             className="min-h-11 flex-1 border border-zoa-line-strong bg-transparent px-3 font-sans text-xs tracking-widest text-zoa-slate transition-colors placeholder:text-zoa-slate-60 focus:border-zoa-slate focus:outline-none focus:ring-2 focus:ring-zoa-slate/15" />
                           <button onClick={handleApplyCode} disabled={couponStatus === "loading"}
                             className="min-h-11 cursor-pointer border border-zoa-line-strong px-4 font-sans text-[10px] uppercase tracking-[0.15em] text-zoa-slate transition-colors duration-200 hover:bg-zoa-slate/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate">
-                            {couponStatus === "loading" ? "…" : "Aplicar"}
+                            {couponStatus === "loading" ? (
+                              <>
+                                <span aria-hidden>…</span>
+                                <span className="sr-only">Aplicando cupón…</span>
+                              </>
+                            ) : "Aplicar"}
                           </button>
                         </div>
                       )}
                       {couponMsg && (
-                        <p className={`font-sans text-[11px] ${couponStatus === "error" ? "text-zoa-wine" : "text-zoa-success"}`}>
+                        <p
+                          role={couponStatus === "error" ? "alert" : "status"}
+                          aria-live="polite"
+                          className={`font-sans text-[11px] ${couponStatus === "error" ? "text-zoa-wine" : "text-zoa-success"}`}
+                        >
                           {couponMsg}
+                        </p>
+                      )}
+                      {couponScope === "eligible" && hasDiscountedItems && (
+                        <p className="font-sans text-[11px] text-zoa-slate-60">
+                          El 15% aplica solo a piezas sin promoción.
                         </p>
                       )}
                     </div>
@@ -379,7 +419,7 @@ export default function CartDrawer() {
                     {isVendido ? (
                       <>
                         {vendidoSuccess ? (
-                          <div className="inline-flex w-full items-center justify-center gap-2 border border-zoa-success py-3.5 text-center font-sans text-sm tracking-wide text-zoa-success">
+                          <div role="status" aria-live="polite" className="inline-flex w-full items-center justify-center gap-2 border border-zoa-success py-3.5 text-center font-sans text-sm tracking-wide text-zoa-success">
                             <CheckCircle2 size={16} aria-hidden /> Venta registrada — inventario descontado
                           </div>
                         ) : (
@@ -414,7 +454,7 @@ export default function CartDrawer() {
                         </p>
                       </>
                     )}
-                    {error && <p className="text-center font-sans text-xs text-zoa-wine">{error}</p>}
+                    {error && <p role="alert" aria-live="polite" className="text-center font-sans text-xs text-zoa-wine">{error}</p>}
                   </div>
                 )}
               </>
@@ -448,7 +488,7 @@ export default function CartDrawer() {
                   {/* MP Brick una vez validado el formulario */}
                   {showBrick ? (
                     <div key={`mp-brick-${finalTotal}`} style={{ touchAction: 'manipulation', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-                      {error && <p className="mb-3 font-sans text-xs text-zoa-wine">{error}</p>}
+                      {error && <p role="alert" aria-live="polite" className="mb-3 font-sans text-xs text-zoa-wine">{error}</p>}
                       {paying && (
                         <div className="flex items-center justify-center gap-2 py-4 font-sans text-xs text-zoa-slate-60">
                           <Loader2 size={16} aria-hidden className="animate-spin text-zoa-slate" />
@@ -491,6 +531,7 @@ export default function CartDrawer() {
                                 },
                                 total: finalTotal,
                                 vipCode: promoCode,
+                                consent: { privacy: true, terms: true, acceptedAt: new Date().toISOString() },
                               }),
                             });
                             const data = await res.json();
@@ -521,8 +562,10 @@ export default function CartDrawer() {
                     <>
                       {/* Formulario de envío */}
                       <div className="space-y-3">
-                        <input type="text" placeholder="Nombre completo"
+                        <label htmlFor="drawer-name" className="sr-only">Nombre completo</label>
+                        <input id="drawer-name" type="text" placeholder="Nombre completo"
                           aria-label="Nombre completo"
+                          autoComplete="name"
                           value={shippingData.name}
                           onChange={(e) => setShippingData((d) => ({ ...d, name: e.target.value }))}
                           className={InputCls} />
@@ -530,25 +573,33 @@ export default function CartDrawer() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="relative">
                             <Mail size={13} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zoa-slate-60" />
-                            <input type="email" placeholder="Correo electrónico"
+                            <label htmlFor="drawer-email" className="sr-only">Correo electrónico</label>
+                            <input id="drawer-email" type="email" placeholder="Correo electrónico"
                               aria-label="Correo electrónico"
+                              autoComplete="email"
                               value={shippingData.email}
                               onChange={(e) => setShippingData((d) => ({ ...d, email: e.target.value }))}
                               className={`${InputCls} pl-8`} />
                           </div>
                           <div className="relative">
                             <Phone size={13} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zoa-slate-60" />
-                            <input type="tel" placeholder="Teléfono"
+                            <label htmlFor="drawer-phone" className="sr-only">Teléfono</label>
+                            <input id="drawer-phone" type="tel" placeholder="Teléfono"
                               aria-label="Teléfono"
+                              autoComplete="tel"
                               value={shippingData.phone}
                               onChange={(e) => setShippingData((d) => ({ ...d, phone: e.target.value }))}
                               className={`${InputCls} pl-8`} />
                           </div>
                         </div>
 
-                        {/* Dirección con autocompletado */}
-                        <div className="relative">
+                        {/* Dirección con búsqueda explícita (botón o Enter) */}
+                        <div>
+                          <label htmlFor="drawer-address" className="sr-only">Dirección — calle y número</label>
                           <AddressAutocomplete
+                            id="drawer-address"
+                            autoComplete="street-address"
+                            selected={addressSelected}
                             value={shippingData.address}
                             onChange={(v) => {
                               setShippingData((d) => ({ ...d, address: v }));
@@ -565,14 +616,9 @@ export default function CartDrawer() {
                               }));
                               setAddressSelected(true);
                             }}
-                            className={`${InputCls} ${addressSelected ? "border-zoa-success pr-10" : ""}`}
+                            className={`${InputCls} ${addressSelected ? "border-zoa-success" : ""}`}
                             placeholder="Calle, número y colonia — ej: Insurgentes 123, Roma"
                           />
-                          {addressSelected && (
-                            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                              <CheckCircle2 size={15} aria-hidden className="text-zoa-success" />
-                            </div>
-                          )}
                         </div>
 
                         {/* Ciudad/Estado auto-poblados */}
@@ -585,32 +631,61 @@ export default function CartDrawer() {
 
                         {/* Núm. Exterior / Interior */}
                         <div className="grid grid-cols-2 gap-2">
-                          <input type="text" placeholder="Núm. Exterior *"
-                            aria-label="Número exterior"
-                            value={shippingData.numExterior}
-                            onChange={(e) => setShippingData((d) => ({ ...d, numExterior: e.target.value }))}
-                            className={InputCls} />
-                          <input type="text" placeholder="Interior / Depto. (opcional)"
-                            aria-label="Número interior"
-                            value={shippingData.interior}
-                            onChange={(e) => setShippingData((d) => ({ ...d, interior: e.target.value }))}
-                            className={InputCls} />
+                          <div>
+                            <label htmlFor="drawer-num-exterior" className="sr-only">Número exterior</label>
+                            <input id="drawer-num-exterior" type="text" placeholder="Núm. Exterior *"
+                              aria-label="Número exterior"
+                              autoComplete="address-line2"
+                              value={shippingData.numExterior}
+                              onChange={(e) => setShippingData((d) => ({ ...d, numExterior: e.target.value }))}
+                              className={InputCls} />
+                          </div>
+                          <div>
+                            <label htmlFor="drawer-num-interior" className="sr-only">Número interior</label>
+                            <input id="drawer-num-interior" type="text" placeholder="Interior / Depto. (opcional)"
+                              aria-label="Número interior"
+                              autoComplete="address-line3"
+                              value={shippingData.interior}
+                              onChange={(e) => setShippingData((d) => ({ ...d, interior: e.target.value }))}
+                              className={InputCls} />
+                          </div>
                         </div>
-                        <input type="text" placeholder="Referencias (entre calles, color de fachada...)"
+                        <label htmlFor="drawer-referencias" className="sr-only">Referencias de entrega</label>
+                        <input id="drawer-referencias" type="text" placeholder="Referencias (entre calles, color de fachada...)"
                           aria-label="Referencias de entrega"
+                          autoComplete="off"
                           value={shippingData.referencias}
                           onChange={(e) => setShippingData((d) => ({ ...d, referencias: e.target.value }))}
                           className={InputCls} />
                       </div>
 
-                      {formError && <p className="font-sans text-xs text-zoa-wine">{formError}</p>}
+                      {formError && <p role="alert" aria-live="polite" className="font-sans text-xs text-zoa-wine">{formError}</p>}
 
                       <div className="flex items-start gap-2 border border-zoa-line px-4 py-3 font-sans text-xs text-zoa-slate-60">
                         <CreditCard size={14} strokeWidth={1.4} aria-hidden className="mt-0.5 shrink-0 text-zoa-slate-60" />
                         <span>El pago se procesará de forma segura a través de <strong className="font-medium text-zoa-slate">Mercado Pago</strong>. Aceptamos tarjetas, OXXO y transferencias.</span>
                       </div>
 
-                      {error && <p className="font-sans text-xs text-zoa-wine">{error}</p>}
+                      {/* Consentimiento obligatorio (Aviso de Privacidad + Términos) */}
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          id="drawer-consent"
+                          type="checkbox"
+                          checked={accepted}
+                          onChange={(e) => setAccepted(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-zoa-forest"
+                        />
+                        <label
+                          htmlFor="drawer-consent"
+                          className="font-sans text-[11px] leading-relaxed text-zoa-slate-60"
+                        >
+                          He leído y acepto el{" "}
+                          <Link href="/privacidad" className={LEGAL_LINK}>Aviso de Privacidad</Link> y los{" "}
+                          <Link href="/terminos" className={LEGAL_LINK}>Términos y Condiciones</Link>
+                        </label>
+                      </div>
+
+                      {error && <p role="alert" aria-live="polite" className="font-sans text-xs text-zoa-wine">{error}</p>}
 
                       <motion.button
                         onClick={handleGoToPayment}

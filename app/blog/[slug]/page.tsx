@@ -51,7 +51,7 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
   });
 
   return (
-    <main className="min-h-screen bg-zoa-sand pt-24 md:pt-28">
+    <div className="min-h-screen bg-zoa-sand pt-24 md:pt-28">
       {/* ── Imagen de portada a sangre ── */}
       <div className="relative h-[clamp(260px,42vw,520px)] w-full overflow-hidden bg-zoa-surface">
         <Image
@@ -198,6 +198,6 @@ export default async function BlogArticlePage({ params }: { params: Promise<{ sl
           }),
         }}
       />
-    </main>
+    </div>
   );
 }

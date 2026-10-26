@@ -30,8 +30,8 @@ export default function ProductCard({
     ? { ...product, images: [variants[activeVariant]?.image ?? product.images[0], ...product.images.slice(1)] }
     : product;
 
-  const primaryImage = activeProduct.images[0] ?? "/placeholder.jpg";
-  const hoverImage = activeProduct.images[1] ?? activeProduct.images[0] ?? "/placeholder.jpg";
+  const primaryImage = activeProduct.images[0];
+  const hoverImage = activeProduct.images[1] ?? activeProduct.images[0];
   const hasHoverImage = activeProduct.images.length > 1;
 
   const totalStock = Object.values(product.stock ?? {}).reduce((a, b) => a + (b ?? 0), 0);
@@ -86,24 +86,26 @@ export default function ProductCard({
           {/* Hairline interior sutil */}
           <span aria-hidden className="pointer-events-none absolute inset-0 z-10 border border-zoa-line" />
 
-          {/* Imagen principal */}
+          {/* Imagen principal — si no hay foto, el contenedor queda en off-white */}
           <div className="product-card-primary absolute inset-0 transition-opacity duration-500">
-            <Image
-              src={primaryImage}
-              alt={product.name}
-              fill
-              sizes={sizes}
-              priority={priority}
-              className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
-            />
+            {primaryImage && (
+              <Image
+                src={primaryImage}
+                alt={product.name}
+                fill
+                sizes={sizes}
+                priority={priority}
+                className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
+              />
+            )}
           </div>
 
           {/* Segunda imagen en hover — solo apuntador fino (CSS) */}
-          {hasHoverImage && (
+          {hasHoverImage && hoverImage && (
             <div className="product-card-hover absolute inset-0 transition-opacity duration-500">
               <Image
                 src={hoverImage}
-                alt={`${product.name} — vista 2`}
+                alt=""
                 fill
                 sizes={sizes}
                 className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
@@ -188,7 +190,7 @@ export default function ProductCard({
                 <span
                   key={size}
                   className={`font-sans text-[9px] uppercase tracking-[0.14em] ${
-                    available ? "text-zoa-forest" : "text-zoa-slate-60 line-through opacity-40"
+                    available ? "text-zoa-forest" : "text-zoa-slate-60 line-through"
                   }`}
                 >
                   {size}

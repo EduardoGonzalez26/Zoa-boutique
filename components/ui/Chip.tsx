@@ -49,6 +49,7 @@ export default function Chip({
     <button
       type="button"
       onClick={onRemove}
+      aria-label={typeof children === "string" ? `Quitar filtro ${children}` : "Quitar filtro"}
       className={`${base} ${VARIANT[variant]} group cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent ${
         variant === "inverse"
           ? "focus-visible:ring-zoa-surface"

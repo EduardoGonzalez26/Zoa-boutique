@@ -15,7 +15,9 @@ import { NextRequest, NextResponse, after } from "next/server";
 import MercadoPagoConfig, { Payment } from "mercadopago";
 import type { CartItem } from "@/lib/types";
 import type { ShippingAddress } from "@/store/checkoutStore";
-import { deductStock, logSale } from "@/lib/googleSheets";
+import { deductStock, getProducts, logSale } from "@/lib/googleSheets";
+import { getOrderBreakdown } from "@/lib/pricing";
+import { getPromoByCode, getZoaNow, isPromoActive } from "@/lib/promotions";
 import { createSkydropxShipment } from "@/lib/skydropx";
 
 // Vercel-only: extends the function timeout to 60 s on Vercel Pro.
@@ -87,11 +89,93 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
     }
 
+    const normalizedVipCode = (vipCode ?? "").trim().toUpperCase();
+    const campaignPromo = getPromoByCode(normalizedVipCode);
+
+    // Los códigos de campaña se validan contra el catálogo y contra su ventana
+    // antes de crear cualquier pago. Los códigos legacy (PROBADOR, ENTREAMIGAS,
+    // VENDIDO y cupones de Apps Script) conservan su flujo actual.
+    let payableItems: CartItem[] = items;
+    let payableTotal = total;
+    let campaignDiscount = 0;
+
+    if (campaignPromo) {
+      const now = getZoaNow();
+
+      if (!isPromoActive(campaignPromo, now)) {
+        return NextResponse.json(
+          { error: "Este código solo está activo durante su campaña." },
+          { status: 400 },
+        );
+      }
+
+      if (!Array.isArray(items) || items.length === 0 || !Number.isFinite(total)) {
+        return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+      }
+
+      let catalog: Awaited<ReturnType<typeof getProducts>>;
+      try {
+        catalog = await getProducts();
+      } catch (catalogError) {
+        console.error("[process-payment] Catalog validation failed:", catalogError);
+        return NextResponse.json(
+          { error: "No pudimos validar el catálogo. Intenta de nuevo." },
+          { status: 503 },
+        );
+      }
+
+      const catalogById = new Map(catalog.map((product) => [product.id, product]));
+      const validatedItems: CartItem[] = [];
+
+      for (const item of items) {
+        const product = item?.product?.id
+          ? catalogById.get(item.product.id)
+          : undefined;
+
+        if (!product) {
+          return NextResponse.json(
+            {
+              error:
+                "Uno de los productos de tu bolsa ya no está disponible. Actualiza e intenta de nuevo.",
+            },
+            { status: 400 },
+          );
+        }
+
+        const quantity = Number(item.quantity);
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+          return NextResponse.json(
+            { error: "Cantidad inválida en tu bolsa." },
+            { status: 400 },
+          );
+        }
+
+        // Precio, descuento, nombre e imágenes salen del catálogo vigente.
+        validatedItems.push({ ...item, product, quantity });
+      }
+
+      const expected = getOrderBreakdown(validatedItems, {
+        promoCode: campaignPromo.code,
+        now,
+      });
+
+      if (Math.abs(total - expected.total) > 1) {
+        return NextResponse.json(
+          { error: "El precio de tu bolsa cambió. Actualiza e intenta de nuevo." },
+          { status: 409 },
+        );
+      }
+
+      payableItems = validatedItems;
+      payableTotal = expected.total;
+      campaignDiscount = expected.discount;
+    }
+
     // Build payment payload
     const paymentPayload = {
-      transaction_amount: total,
+      transaction_amount: payableTotal,
       token:              formData.token,
-      description:        `Zoa — ${items.map((i) => `${i.product.name} (${i.size})`).join(", ")}`,
+      description:        `Zoa — ${payableItems.map((i) => `${i.product.name} (${i.size})`).join(", ")}`,
       installments:       formData.installments ?? 1,
       payment_method_id:  formData.payment_method_id,
       issuer_id:          formData.issuer_id ? Number(formData.issuer_id) : undefined,
@@ -113,13 +197,19 @@ export async function POST(req: NextRequest) {
           state:       address.state,
           zip:         address.zip,
         },
-        items: items.map((i) => ({
+        items: payableItems.map((i) => ({
           productId: i.product.id,
           size:      i.size,
           quantity:  i.quantity,
         })),
-        total,
-        vipCode,
+        total: payableTotal,
+        vipCode: normalizedVipCode,
+        ...(campaignPromo
+          ? {
+              discountAmount: campaignDiscount,
+              couponCode: campaignPromo.code,
+            }
+          : {}),
       },
     };
 
@@ -146,7 +236,7 @@ export async function POST(req: NextRequest) {
 
     if (result.status === "approved") {
       // 1. Deduct stock
-      try { await deductStock(items); }
+      try { await deductStock(payableItems); }
       catch (e) { console.error("Stock deduction failed:", e); }
 
       // 2. Log sale to Sheets
@@ -163,17 +253,17 @@ export async function POST(req: NextRequest) {
           address.numInterior ? `Int. ${address.numInterior}` : "",
           address.city, address.state, address.zip,
         ].filter(Boolean).join(", "),
-          items:         items.map((ci) => ({
+          items:         payableItems.map((ci) => ({
             name:  ci.product.name,
             sku:   ci.product.id,
             size:  ci.size,
             qty:   ci.quantity,
             price: ci.product.price,
           })),
-          total,
+          total:         payableTotal,
           paymentMethod: formData.payment_method_id ?? "tarjeta",
           status:        result.status ?? "approved",
-          vipCode,
+          vipCode:       normalizedVipCode,
         });
       } catch (e) { console.error("Sale log failed:", e); }
 
@@ -223,7 +313,16 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify({
               paymentId: result.id,
               status:    result.status,
-              items, address, total, vipCode,
+              items:     payableItems,
+              address,
+              total:     payableTotal,
+              vipCode:   normalizedVipCode,
+              ...(campaignPromo
+                ? {
+                    discountAmount: campaignDiscount,
+                    couponCode: campaignPromo.code,
+                  }
+                : {}),
               orderId,
               trackingNumber, labelUrl, carrier,
               skydropxError,

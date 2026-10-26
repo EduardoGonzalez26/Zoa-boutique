@@ -16,7 +16,7 @@ interface EmptyStateProps {
 
 // v4.1 · El CTA del EmptyState hereda el `outline` forest del kit (inversión completa al hover).
 const ACTION_CLASS_DEFAULT =
-  "group inline-flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-forest-35 px-6 py-3 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-forest transition-[background-color,border-color,color] duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px";
+  "group inline-flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-forest-55 px-6 py-3 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-forest transition-[background-color,border-color,color] duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px";
 
 const ACTION_CLASS_INVERSE =
   "group inline-flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-surface/60 px-6 py-3 font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-surface transition-colors duration-200 hover:border-zoa-surface hover:bg-zoa-surface/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-surface focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px";

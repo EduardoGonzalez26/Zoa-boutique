@@ -33,7 +33,7 @@ export default function BlogCard({ article, featured = false, priority = false }
         >
           <ImageReveal
             src={article.coverImage}
-            alt={article.title}
+            alt=""
             sizes="(max-width: 768px) 100vw, 58vw"
             priority={priority}
             className="aspect-[4/3] w-full sm:aspect-[16/10] md:aspect-[4/3]"
@@ -82,7 +82,7 @@ export default function BlogCard({ article, featured = false, priority = false }
         <div className="relative mb-5 aspect-[4/3] w-full overflow-hidden bg-zoa-surface">
           <ImageReveal
             src={article.coverImage}
-            alt={article.title}
+            alt=""
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="h-full w-full"
             imgClassName="object-cover object-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"

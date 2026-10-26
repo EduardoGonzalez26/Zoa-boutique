@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Payment, initMercadoPago } from "@mercadopago/sdk-react";
 import { Lock } from "lucide-react";
@@ -27,30 +28,53 @@ const EMPTY_ADDRESS: ShippingAddress = {
 };
 
 const INPUT_CLS =
-  "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3.5 py-3 font-sans text-[13px] text-zoa-slate transition-colors placeholder:text-zoa-slate-60/60 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
+  "w-full rounded-xs border border-zoa-line-strong bg-transparent px-3.5 py-3 font-sans text-[13px] text-zoa-slate transition-colors placeholder:text-zoa-slate-60 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15";
+
+/** Enlaces legales dentro de copy/microcopy (arena u off-white). */
+const LEGAL_LINK =
+  "underline underline-offset-2 transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest";
 
 const OVERLINE = "overline-forest";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { checkoutItems, vipCode, setAddress, clearCheckout } = useCheckoutStore();
-  const { items: cartItems, vipCode: cartVipCode, isVip, clearCart } = useCartStore();
+  const {
+    items: cartItems,
+    vipCode: cartVipCode,
+    couponDiscount,
+    couponScope,
+    discountAmount,
+    isVip,
+    clearCart,
+  } = useCartStore();
 
   const [address, setLocalAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const [addressValid, setAddressValid] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
 
   // ── Determine items to charge ─────────────────────────────────────────────
   // If checkoutItems has items → Quick Buy flow. Otherwise → Cart flow.
-  const items: CartItem[] = checkoutItems.length > 0 ? checkoutItems : cartItems;
+  const isCartFlow = checkoutItems.length === 0;
+  const items: CartItem[] = isCartFlow ? cartItems : checkoutItems;
 
   // ── Compute totals ────────────────────────────────────────────────────────
   const subtotal = items.reduce((sum: number, ci: CartItem) => sum + ci.product.price * ci.quantity, 0);
-  const activeCode = (vipCode || cartVipCode).trim().toUpperCase();
+  const rawActiveCode = (vipCode || cartVipCode).trim().toUpperCase();
+  // Quick Buy no tiene campo de cupón: solo conserva VIP y envío gratis.
+  const activeCode =
+    isCartFlow || rawActiveCode === "PROBADOR" || rawActiveCode === FREE_SHIPPING_CODE
+      ? rawActiveCode
+      : "";
   const freeShippingCode = activeCode === FREE_SHIPPING_CODE;
   const shipping = freeShippingCode || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
   const vipActive = isVip() || activeCode === "PROBADOR";
-  const total = vipActive ? 300 : subtotal + shipping;
+  // El cupón de campaña vive en el store del carrito y ya excluye piezas
+  // rebajadas; Quick Buy no aplica cupones de campaña.
+  const campaignDiscount = isCartFlow ? discountAmount() : 0;
+  const hasExcludedItems = isCartFlow && items.some((ci) => (ci.product.discount ?? 0) > 0);
+  const total = vipActive ? 300 : subtotal - campaignDiscount + shipping;
 
   const formattedTotal = new Intl.NumberFormat("es-MX", {
     style: "currency", currency: "MXN", minimumFractionDigits: 0,
@@ -82,7 +106,10 @@ export default function CheckoutPage() {
       const res = await fetch("/api/process-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formData, items, address, total, vipCode: activeCode }),
+        body: JSON.stringify({
+          formData, items, address, total, vipCode: activeCode,
+          consent: { privacy: true, terms: true, acceptedAt: new Date().toISOString() },
+        }),
       });
       const result = await res.json() as { status?: string; error?: string };
       if (!res.ok) throw new Error(result.error ?? "Error procesando pago");
@@ -137,31 +164,57 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(
                 [
-                  { field: "fullName" as keyof ShippingAddress, label: "Nombre completo", span: 2 },
-                  { field: "email" as keyof ShippingAddress, label: "Correo electrónico", type: "email" },
-                  { field: "phone" as keyof ShippingAddress, label: "Teléfono", type: "tel" },
-                  { field: "street" as keyof ShippingAddress, label: "Calle", span: 2 },
-                  { field: "numExterior" as keyof ShippingAddress, label: "Núm. Exterior" },
-                  { field: "numInterior" as keyof ShippingAddress, label: "Núm. Interior (opcional)" },
-                  { field: "colonia" as keyof ShippingAddress, label: "Colonia" },
-                  { field: "zip" as keyof ShippingAddress, label: "Código postal" },
-                  { field: "city" as keyof ShippingAddress, label: "Ciudad" },
-                  { field: "state" as keyof ShippingAddress, label: "Estado" },
-                ] satisfies { field: keyof ShippingAddress; label: string; type?: string; span?: number }[]
-              ).map(({ field, label, type = "text", span }) => (
-                <div key={field} className={span === 2 ? "sm:col-span-2" : ""}>
-                  <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-zoa-slate-60">
-                    {label}
-                  </label>
-                  <input
-                    type={type}
-                    value={address[field]}
-                    onChange={(e) => updateField(field, e.target.value)}
-                    className={INPUT_CLS}
-                    autoComplete="on"
-                  />
-                </div>
-              ))}
+                  { field: "fullName" as keyof ShippingAddress, label: "Nombre completo", span: 2, autoComplete: "name" },
+                  { field: "email" as keyof ShippingAddress, label: "Correo electrónico", type: "email", autoComplete: "email" },
+                  { field: "phone" as keyof ShippingAddress, label: "Teléfono", type: "tel", autoComplete: "tel" },
+                  { field: "street" as keyof ShippingAddress, label: "Calle", span: 2, autoComplete: "street-address" },
+                  { field: "numExterior" as keyof ShippingAddress, label: "Núm. Exterior", autoComplete: "address-line2" },
+                  { field: "numInterior" as keyof ShippingAddress, label: "Núm. Interior (opcional)", autoComplete: "address-line3" },
+                  { field: "colonia" as keyof ShippingAddress, label: "Colonia", autoComplete: "address-level3" },
+                  { field: "zip" as keyof ShippingAddress, label: "Código postal", autoComplete: "postal-code" },
+                  { field: "city" as keyof ShippingAddress, label: "Ciudad", autoComplete: "address-level2" },
+                  { field: "state" as keyof ShippingAddress, label: "Estado", autoComplete: "address-level1" },
+                ] satisfies { field: keyof ShippingAddress; label: string; type?: string; span?: number; autoComplete: string }[]
+              ).map(({ field, label, type = "text", span, autoComplete }) => {
+                const inputId = `checkout-${field}`;
+                return (
+                  <div key={field} className={span === 2 ? "sm:col-span-2" : ""}>
+                    <label
+                      htmlFor={inputId}
+                      className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-zoa-slate-60"
+                    >
+                      {label}
+                    </label>
+                    <input
+                      id={inputId}
+                      type={type}
+                      value={address[field]}
+                      onChange={(e) => updateField(field, e.target.value)}
+                      className={INPUT_CLS}
+                      autoComplete={autoComplete}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Consentimiento obligatorio (Aviso de Privacidad + Términos) */}
+            <div className="mt-6 flex items-start gap-2.5">
+              <input
+                id="checkout-consent"
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-zoa-forest"
+              />
+              <label
+                htmlFor="checkout-consent"
+                className="font-sans text-[11px] leading-relaxed text-zoa-slate-60"
+              >
+                He leído y acepto el{" "}
+                <Link href="/privacidad" className={LEGAL_LINK}>Aviso de Privacidad</Link> y los{" "}
+                <Link href="/terminos" className={LEGAL_LINK}>Términos y Condiciones</Link>
+              </label>
             </div>
           </section>
 
@@ -170,10 +223,10 @@ export default function CheckoutPage() {
             <h2 className={`${OVERLINE} mb-6`}>
               Método de pago
             </h2>
-            {!addressValid ? (
+            {!addressValid || !accepted ? (
               <div className="border border-zoa-line bg-transparent px-6 py-10 text-center">
-                <p className="font-sans text-xs tracking-wide text-zoa-slate-60">
-                  Completa la información de envío para continuar
+                <p role="alert" className="font-sans text-xs tracking-wide text-zoa-slate-60">
+                  Completa la información de envío y acepta los avisos para continuar.
                 </p>
               </div>
             ) : !MP_PUBLIC_KEY ? (
@@ -212,7 +265,7 @@ export default function CheckoutPage() {
               </div>
             )}
             {processingError && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="mt-3 font-sans text-xs text-zoa-error">
+              <motion.p role="alert" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} className="mt-3 font-sans text-xs text-zoa-error">
                 {processingError}
               </motion.p>
             )}
@@ -247,6 +300,17 @@ export default function CheckoutPage() {
                     <span>Subtotal</span>
                     <span className="tabular-nums">{new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(subtotal)}</span>
                   </div>
+                  {campaignDiscount > 0 && (
+                    <div className="flex justify-between font-sans text-xs text-zoa-success">
+                      <span>Descuento ({couponDiscount}%)</span>
+                      <span className="tabular-nums">- {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(campaignDiscount)}</span>
+                    </div>
+                  )}
+                  {couponScope === "eligible" && hasExcludedItems && (
+                    <p className="font-sans text-[11px] leading-relaxed text-zoa-slate-60">
+                      El 15% aplica solo a piezas sin promoción.
+                    </p>
+                  )}
                   <div className="flex justify-between font-sans text-xs text-zoa-slate-60">
                     <span>Envío</span>
                     <span className={shipping === 0 ? "text-zoa-success" : "tabular-nums"}>{shipping === 0 ? "Gratis" : `$${shipping} MXN`}</span>
@@ -262,6 +326,12 @@ export default function CheckoutPage() {
                 <span className="font-display text-[clamp(1.5rem,2.4vw,2rem)] leading-none text-zoa-slate tabular-nums">{formattedTotal}</span>
               </div>
             </div>
+
+            <p className="font-sans text-[10px] leading-relaxed tracking-wide text-zoa-slate-60">
+              Al pagar aceptas el{" "}
+              <Link href="/privacidad" className={LEGAL_LINK}>Aviso de Privacidad</Link> y los{" "}
+              <Link href="/terminos" className={LEGAL_LINK}>Términos y Condiciones</Link> vigentes.
+            </p>
 
             <p className="flex items-center justify-center gap-1.5 text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
               <Lock size={11} aria-hidden />

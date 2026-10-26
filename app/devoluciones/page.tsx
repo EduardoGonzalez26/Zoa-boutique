@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Cambios y Devoluciones | Zoa",
-  description: "Política de cambios y devoluciones de Zoa — moda femenina en México.",
+  title: "Cambios y Devoluciones",
+  description: "Política de cambios y devoluciones de Zoa — moda femenina en México, con derecho de revocación.",
 };
 
 const legalLink = "font-medium text-zoa-slate underline decoration-zoa-slate decoration-2 underline-offset-2 transition-colors hover:text-zoa-forest hover:decoration-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate";
@@ -17,7 +17,7 @@ export default function DevolucionesPage() {
           <h1 className="mt-5 text-balance font-display text-[clamp(2rem,4.5vw,3.25rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-slate">
             Cambios y Devoluciones
           </h1>
-          <p className="mt-4 font-sans text-[11px] uppercase tracking-[0.16em] text-zoa-slate-60 tabular">Última actualización: marzo 2025</p>
+          <p className="mt-4 font-sans text-[11px] uppercase tracking-[0.16em] text-zoa-slate-60 tabular">Última actualización: septiembre 2026</p>
         </div>
 
         {/* Quick Summary */}
@@ -59,6 +59,11 @@ export default function DevolucionesPage() {
               <li>Daño evidente durante el envío.</li>
             </ul>
             <p className="mt-3">El reembolso se realiza al mismo método de pago original en un plazo de <strong className="font-medium text-zoa-slate">3 a 5 días hábiles</strong> una vez que recibamos y aprobemos el artículo devuelto.</p>
+          </section>
+
+          <section>
+            <h2 className="mb-3 font-sans text-lg font-medium text-zoa-slate">Derecho de revocación</h2>
+            <p>Además de lo anterior, conforme a la legislación aplicable tienes derecho a revocar tu compra dentro de los <strong className="font-medium text-zoa-slate">5 días hábiles</strong> contados a partir de la entrega del bien o de la firma del contrato, lo que suceda al final. Consulta los detalles y cómo ejercerlo en nuestra <Link href="/reembolsos" className={legalLink}>Política de Reembolsos</Link>.</p>
           </section>
 
           <section>

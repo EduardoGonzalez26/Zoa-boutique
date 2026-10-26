@@ -16,6 +16,8 @@ export default function Footer() {
     { href: "/privacidad",   label: "Aviso de privacidad" },
     { href: "/terminos",     label: "Términos y condiciones" },
     { href: "/devoluciones", label: "Cambios y devoluciones" },
+    { href: "/cookies",      label: "Política de cookies" },
+    { href: "/reembolsos",   label: "Política de reembolsos" },
     { href: "https://tracking.skydropx.com/es-MX/page/zoa", label: "Rastrear envío", external: true },
     { href: "/sitemap.xml",  label: "Sitemap" },
   ];
@@ -117,10 +119,10 @@ export default function Footer() {
 
         {/* Categorías */}
         <div>
-          <h4 className={columnTitle}>
+          <h2 className={columnTitle}>
             <span>Tienda</span>
             <span className={columnIndex}>01</span>
-          </h4>
+          </h2>
           <Link href="/tienda" className={`${columnLink} mb-2`}>
             Todos los productos
           </Link>
@@ -137,10 +139,10 @@ export default function Footer() {
 
         {/* Colecciones */}
         <div>
-          <h4 className={columnTitle}>
+          <h2 className={columnTitle}>
             <span>Colecciones</span>
             <span className={columnIndex}>02</span>
-          </h4>
+          </h2>
           {[
             { label: "Primavera-Verano", slug: "primavera-verano" },
             { label: "Otoño-Invierno",  slug: "otono-invierno"  },
@@ -148,7 +150,7 @@ export default function Footer() {
             { label: "Outlet",          slug: "outlet"           },
             { label: "Recomendados",    slug: "recomendados"     },
           ].map(({ label, slug }) => (
-            <Link key={slug} href={`/colecciones/${slug}`} className={columnLink}>
+            <Link key={slug} href={`/tienda?coleccion=${slug}`} className={columnLink}>
               {label}
             </Link>
           ))}
@@ -156,10 +158,10 @@ export default function Footer() {
 
         {/* Legal & SEO */}
         <div>
-          <h4 className={columnTitle}>
+          <h2 className={columnTitle}>
             <span>Información</span>
             <span className={columnIndex}>03</span>
-          </h4>
+          </h2>
           {legal.map(({ href, label, external }) => (
             external ? (
               <a

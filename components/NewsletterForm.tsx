@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 const PHONE = "525521068191";
@@ -19,31 +20,44 @@ export default function NewsletterForm() {
   const href = `https://wa.me/${PHONE}?text=${encodeURIComponent(message)}`;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        window.open(href, "_blank", "noopener,noreferrer");
-      }}
-      className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch"
-    >
-      <label className="sr-only" htmlFor="zoa-circle-email">
-        Correo electrónico
-      </label>
-      <input
-        id="zoa-circle-email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="tu@correo.com"
-        className="min-h-12 flex-1 border border-zoa-line-strong bg-transparent px-4 font-sans text-[13px] text-zoa-slate placeholder:text-zoa-slate-60 transition-colors duration-200 focus:border-zoa-forest focus:outline-none focus:ring-2 focus:ring-zoa-forest/15"
-      />
-      <button
-        type="submit"
-        className="group inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 border border-zoa-forest-35 bg-transparent px-6 font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-zoa-forest transition-colors duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          window.open(href, "_blank", "noopener,noreferrer");
+        }}
+        className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-stretch"
       >
-        Unirme
-        <ArrowRight size={12} aria-hidden className="transition-transform duration-200 group-hover:translate-x-1" />
-      </button>
-    </form>
+        <label className="sr-only" htmlFor="zoa-circle-email">
+          Correo electrónico
+        </label>
+        <input
+          id="zoa-circle-email"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="tu@correo.com"
+          className="min-h-12 flex-1 border border-zoa-line-strong bg-transparent px-4 font-sans text-[13px] text-zoa-slate placeholder:text-zoa-slate-60 transition-colors duration-200 focus:border-zoa-forest focus:outline-none focus:ring-2 focus:ring-zoa-forest/15"
+        />
+        <button
+          type="submit"
+          className="group inline-flex min-h-12 shrink-0 cursor-pointer items-center justify-center gap-2 border border-zoa-forest-55 bg-transparent px-6 font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-zoa-forest transition-colors duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
+        >
+          Unirme
+          <ArrowRight size={12} aria-hidden className="transition-transform duration-200 group-hover:translate-x-1" />
+        </button>
+      </form>
+      <p className="mt-3 font-sans text-[11px] leading-relaxed text-zoa-slate-60">
+        Al continuar se abrirá WhatsApp; aceptas que te contactemos por ese medio conforme al{" "}
+        <Link
+          href="/privacidad"
+          className="underline underline-offset-2 transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest"
+        >
+          Aviso de Privacidad
+        </Link>
+        .
+      </p>
+    </>
   );
 }

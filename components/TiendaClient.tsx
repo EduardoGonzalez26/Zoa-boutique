@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, X, Search, ChevronDown, LayoutGrid, Rows3, Columns4 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
@@ -10,6 +10,7 @@ import Reveal from "@/components/ui/Reveal";
 import Chip from "@/components/ui/Chip";
 import EmptyState from "@/components/ui/EmptyState";
 import Overline from "@/components/ui/Overline";
+import useFocusTrap from "@/components/ui/useFocusTrap";
 import type { Product } from "@/lib/types";
 
 const CATEGORIES = [
@@ -91,6 +92,11 @@ export default function TiendaClient({ products }: TiendaClientProps) {
   const [showAllCols, setShowAllCols] = useState(false);
   const [sort, setSort] = useState<SortKey>("recomendado");
   const [density, setDensity] = useState<Density>(4);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Bottom sheet de filtros: foco inicial, trap de Tab, Escape, scroll lock
+  // y devolución del foco al botón "Filtrar".
+  useFocusTrap(filtersOpen, sheetRef, () => setFiltersOpen(false));
 
   const activeCategory   = searchParams.get("categoria") ?? "";
   const activeCollection = searchParams.get("coleccion") ?? "";
@@ -160,14 +166,6 @@ export default function TiendaClient({ products }: TiendaClientProps) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-
-  // Bloquea el scroll de fondo mientras el bottom sheet está abierto
-  useEffect(() => {
-    if (!filtersOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [filtersOpen]);
 
   const visibleCats = showAllCats ? availableCategories : availableCategories.slice(0, SHOW_INITIALLY);
   const visibleCols = showAllCols ? availableCollections : availableCollections.slice(0, SHOW_INITIALLY);
@@ -264,7 +262,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
                 className={`flex h-7 w-7 rounded-full border-2 transition-all duration-200 ${activeColor === label ? "scale-110 border-zoa-slate" : "border-transparent hover:border-zoa-line-strong"}`}
                 style={{ backgroundColor: hex, boxShadow: hex === "#f5f5f0" || hex === "#f0ead6" || hex === "#e8dcc8" ? "inset 0 0 0 1px rgba(43,60,66,0.18)" : undefined }}
               />
-              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap bg-zoa-slate px-2 py-1 font-sans text-[9px] uppercase tracking-[0.12em] text-zoa-sand opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 -translate-x-1/2 whitespace-nowrap bg-zoa-slate px-2 py-1 font-sans text-[9px] uppercase tracking-[0.12em] text-zoa-sand opacity-0 transition-opacity group-hover:opacity-100" aria-hidden>
                 {label}
               </span>
             </button>
@@ -400,7 +398,7 @@ export default function TiendaClient({ products }: TiendaClientProps) {
 
             <button
               onClick={() => setFiltersOpen(true)}
-              className="flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-forest-35 px-5 font-sans text-[10px] uppercase tracking-[0.16em] text-zoa-forest transition-colors duration-200 hover:bg-zoa-forest/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest lg:hidden"
+              className="flex min-h-11 cursor-pointer items-center gap-2 border border-zoa-forest-55 px-5 font-sans text-[10px] uppercase tracking-[0.16em] text-zoa-forest transition-colors duration-200 hover:bg-zoa-forest/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest lg:hidden"
             >
               <SlidersHorizontal size={13} aria-hidden />
               Filtrar
@@ -501,9 +499,11 @@ export default function TiendaClient({ products }: TiendaClientProps) {
               aria-hidden
             />
             <motion.div
+              ref={sheetRef}
               role="dialog"
               aria-modal="true"
               aria-label="Filtros"
+              tabIndex={-1}
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
               transition={{ duration: 0.32, ease: EASE }}
               className="fixed inset-x-0 bottom-0 z-50 flex max-h-[88svh] flex-col border-t border-zoa-line bg-zoa-sand lg:hidden"

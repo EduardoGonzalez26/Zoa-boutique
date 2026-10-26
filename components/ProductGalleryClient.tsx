@@ -13,6 +13,7 @@ import ProductReviews from "@/components/ProductReviews";
 import Accordion, { type AccordionEntry } from "@/components/ui/Accordion";
 import Overline from "@/components/ui/Overline";
 import ImageReveal from "@/components/ui/ImageReveal";
+import useFocusTrap from "@/components/ui/useFocusTrap";
 
 interface ProductGalleryClientProps {
   product: Product;
@@ -46,6 +47,7 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
   const [added, setAdded] = useState(false);
   const [sizeError, setSizeError] = useState(false);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const sizeGuideRef = useRef<HTMLDivElement>(null);
   const [barVisible, setBarVisible] = useState(false);
   const { addItem, openCart, openCartAtCheckout } = useCartStore();
   const router = useRouter();
@@ -53,7 +55,11 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
   const mounted = useMounted();
   const rm = mounted && reduceMotion;
 
-  const images = product.images.length > 0 ? product.images : ["/placeholder.jpg"];
+  // Modal de guía de tallas: foco inicial, trap de Tab, Escape, scroll lock
+  // y devolución del foco al botón "Guía de tallas".
+  useFocusTrap(sizeGuideOpen, sizeGuideRef, () => setSizeGuideOpen(false));
+
+  const images = product.images;
 
   // ── Slider móvil: CSS scroll-snap nativo ──────────────────────────────
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -156,7 +162,7 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
                   >
                     <Image
                       src={img}
-                      alt={`${product.name} ${i + 1}`}
+                      alt={`${product.name} — vista ${i + 1}`}
                       fill
                       className="object-cover"
                       sizes="100vw"
@@ -237,18 +243,25 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
             )}
 
             <div className="group relative min-w-0 flex-1">
-              <ImageReveal
-                src={images[selectedImage]}
-                alt={`${product.name} ${selectedImage + 1}`}
-                sizes="(max-width: 1280px) 50vw, 720px"
-                priority={selectedImage === 0}
-                className="aspect-[4/5] w-full"
-                imgClassName="object-cover object-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
-              />
-              {/* Contador en overlay hairline */}
-              <span className="pointer-events-none absolute bottom-4 right-4 border border-zoa-line bg-zoa-sand/90 px-3 py-1.5 font-sans text-[10px] tracking-[0.2em] text-zoa-slate backdrop-blur-sm tabular">
-                {pad(selectedImage + 1)} / {pad(images.length)}
-              </span>
+              {images.length > 0 ? (
+                <>
+                  <ImageReveal
+                    src={images[selectedImage]}
+                    alt={`${product.name} — vista ${selectedImage + 1}`}
+                    sizes="(max-width: 1280px) 50vw, 720px"
+                    priority={selectedImage === 0}
+                    className="aspect-[4/5] w-full"
+                    imgClassName="object-cover object-center transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.03]"
+                  />
+                  {/* Contador en overlay hairline */}
+                  <span className="pointer-events-none absolute bottom-4 right-4 border border-zoa-line bg-zoa-sand/90 px-3 py-1.5 font-sans text-[10px] tracking-[0.2em] text-zoa-slate backdrop-blur-sm tabular">
+                    {pad(selectedImage + 1)} / {pad(images.length)}
+                  </span>
+                </>
+              ) : (
+                /* Sin fotos: bloque off-white, sin <Image> roto */
+                <div aria-hidden className="aspect-[4/5] w-full bg-zoa-surface" />
+              )}
             </div>
           </div>
         </div>
@@ -340,6 +353,11 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
             onClick={() => setSizeGuideOpen(false)}
           >
             <motion.div
+              ref={sizeGuideRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="size-guide-title"
+              tabIndex={-1}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
@@ -348,7 +366,9 @@ export default function ProductGalleryClient({ product, allProducts = [] }: Prod
               onClick={(e) => e.stopPropagation()}
             >
               <div className="hairline-b flex items-center justify-between px-5 py-4">
-                <Overline as="h3">Guía de tallas</Overline>
+                <div id="size-guide-title">
+                  <Overline as="h3">Guía de tallas</Overline>
+                </div>
                 <button
                   onClick={() => setSizeGuideOpen(false)}
                   className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
@@ -445,10 +465,9 @@ function ProductInfoHeader({
         >
           Guía de tallas
         </button>
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
+        <button
+          type="button"
+          onClick={() => {
             const url = `https://wa.me/?text=${encodeURIComponent(`¡Mira este producto de Zoa! ${product.name} — ${window.location.href}`)}`;
             window.open(url, "_blank", "noopener,noreferrer");
           }}
@@ -458,7 +477,7 @@ function ProductInfoHeader({
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.79 23.492l4.623-1.467A11.932 11.932 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818c-2.168 0-4.191-.586-5.932-1.608l-.42-.252-2.744.87.885-2.683-.276-.44A9.77 9.77 0 012.182 12c0-5.414 4.404-9.818 9.818-9.818S21.818 6.586 21.818 12 17.414 21.818 12 21.818z"/></svg>
           <span className="font-sans text-[10px] uppercase tracking-[0.15em]">Compartir</span>
-        </a>
+        </button>
       </div>
     </div>
   );
@@ -552,7 +571,7 @@ function ProductFormSection({
               ? (
                   <span
                     title={productColor}
-                    aria-label={productColor}
+                    aria-hidden
                     style={{
                       backgroundColor: COLOR_HEX[productColor] ?? "#DDDBD3",
                       width: "2rem",
@@ -604,7 +623,7 @@ function ProductFormSection({
                     ? selected
                       ? "cursor-pointer border-zoa-forest bg-zoa-forest text-zoa-surface"
                       : "cursor-pointer border-zoa-line-strong text-zoa-slate hover:border-zoa-slate"
-                    : "cursor-not-allowed border-zoa-line text-zoa-slate-60/60"
+                    : "cursor-not-allowed border-zoa-line text-zoa-slate-60"
                   }`}
               >
                 {size}
@@ -650,7 +669,7 @@ function ProductFormSection({
           <motion.button
             onClick={handleBuyNow}
             whileTap={{ scale: 0.99 }}
-            className="flex h-14 w-full cursor-pointer items-center justify-center gap-3 border border-zoa-forest-35 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-forest transition-[background-color,border-color,color] duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
+            className="flex h-14 w-full cursor-pointer items-center justify-center gap-3 border border-zoa-forest-55 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-forest transition-[background-color,border-color,color] duration-200 hover:border-zoa-forest hover:bg-zoa-forest hover:text-zoa-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px"
           >
             <Zap size={14} strokeWidth={1.5} aria-hidden />
             Comprar ahora
@@ -705,7 +724,7 @@ function CrossSellSection({ crossSell }: { crossSell: Product[] }) {
               {p.images[0] && (
                 <Image
                   src={p.images[0]}
-                  alt={p.name}
+                  alt=""
                   fill
                   className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
                   sizes="144px"

@@ -20,7 +20,7 @@ export default function BlogPage() {
   const [featured, ...rest] = BLOG_ARTICLES;
 
   return (
-    <main className="min-h-screen bg-zoa-sand pt-28 md:pt-32">
+    <div className="min-h-screen bg-zoa-sand pt-28 md:pt-32">
       {/* ── Header editorial ── */}
       <section className="container-zoa">
         <nav aria-label="Breadcrumb" className="hairline-b flex items-center gap-2 pb-4 pt-6">
@@ -97,6 +97,6 @@ export default function BlogPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

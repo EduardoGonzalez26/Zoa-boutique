@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import {
   Truck,
   ShieldCheck,
@@ -8,6 +7,7 @@ import {
 import ProductCard from "@/components/ProductCard";
 import HeroSection from "@/components/HeroSection";
 import Marquee from "@/components/Marquee";
+import PromoBanner from "@/components/PromoBanner";
 import CollectionIndex, { type CollectionRow } from "@/components/CollectionIndex";
 import Reveal from "@/components/ui/Reveal";
 import ImageReveal from "@/components/ui/ImageReveal";
@@ -15,6 +15,7 @@ import SectionHeader from "@/components/ui/SectionHeader";
 import Overline from "@/components/ui/Overline";
 import Button from "@/components/ui/Button";
 import { getGroupedProducts } from "@/lib/googleSheets";
+import { getActivePromo } from "@/lib/promotions";
 import type { Product } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -143,8 +144,11 @@ export default async function HomePage() {
     };
   });
 
+  // ── Campaña vigente en hora de México; fuera de temporada no se renderiza ──
+  const promo = getActivePromo();
+
   return (
-    <main className="bg-zoa-sand">
+    <div className="bg-zoa-sand">
       {/* ══ 1 · HERO ══ */}
       <HeroSection />
 
@@ -265,6 +269,10 @@ export default async function HomePage() {
         </Reveal>
       </section>
 
+      {/* ══ 5.1 · PROMOCIÓN (condicional) — única banda wine de la home;
+          fuera de temporada no se renderiza y los carruseles siguen directo ══ */}
+      {promo && <PromoBanner promo={promo} />}
+
       {/* ══ 6 · CARRUSELES DE PRODUCTO ══ */}
       {products.length > 0 && (
         <>
@@ -325,64 +333,7 @@ export default async function HomePage() {
         />
       )}
 
-      {/* ══ 7 · BANDA WINE — Día de las Madres (única banda wine de la home) ══ */}
-      <section className="mt-[var(--space-section)] bg-zoa-wine text-zoa-surface">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
-          {/* Texto (7) */}
-          <div className="order-2 flex items-center px-5 py-16 md:px-10 md:py-24 lg:order-1 lg:col-span-7 xl:px-20 2xl:px-[calc((100vw_-_1600px)/2_+_5rem)]">
-            <div className="w-full max-w-2xl">
-              <Reveal>
-                <Overline tone="inverse">10 de mayo · Día de las Madres</Overline>
-              </Reveal>
-
-              <Reveal delay={0.06}>
-                <h2 className="mt-6 text-balance font-display text-[clamp(2.25rem,5.5vw,4.75rem)] font-normal leading-[0.98] tracking-[-0.02em] text-zoa-surface">
-                  ¡Mamá se verá espectacular!
-                </h2>
-              </Reveal>
-
-              <Reveal delay={0.12}>
-                <p className="mt-6 max-w-md font-sans text-[15px] leading-[1.7] text-zoa-slate-inverse-60">
-                  Usa el cupón <strong className="font-medium tracking-[0.08em] text-zoa-surface">MAMA15</strong> y llévate el{" "}
-                  <strong className="font-medium text-zoa-surface">15% OFF</strong> en toda la tienda.
-                </p>
-              </Reveal>
-
-              {/* Chip del cupón — hairline inverse */}
-              <Reveal delay={0.18}>
-                <div className="mt-8 inline-flex items-center gap-4 border border-zoa-line-inverse-35 px-5 py-3">
-                  <span className="font-sans text-[10px] uppercase tracking-[0.22em] text-zoa-slate-inverse-60">
-                    Código
-                  </span>
-                  <span aria-hidden className="h-4 w-px bg-zoa-line-inverse-35" />
-                  <span className="font-sans text-base font-medium tracking-[0.3em] text-zoa-surface">
-                    MAMA15
-                  </span>
-                </div>
-              </Reveal>
-
-              <Reveal delay={0.24} className="mt-10">
-                <Button href="/tienda" variant="inverse" size="lg">
-                  Regalar ahora
-                </Button>
-              </Reveal>
-            </div>
-          </div>
-
-          {/* Imagen del banner a sangre (5) */}
-          <div className="relative order-1 aspect-[4/5] w-full sm:aspect-[16/10] lg:order-2 lg:col-span-5 lg:aspect-auto lg:min-h-[620px]">
-            <Image
-              src="/bannerzoa.png"
-              alt="Día de las Madres — Zoa"
-              fill
-              sizes="(max-width: 1024px) 100vw, 42vw"
-              className="object-cover object-center"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ══ 8 · PROMESAS DE SERVICIO ══ */}
+      {/* ══ 7 · PROMESAS DE SERVICIO ══ */}
       <section className="container-zoa py-[var(--space-section)]">
         <div className="grid grid-cols-1 border-t border-zoa-line md:grid-cols-3">
           {PROMISES.map(({ icon: Icon, label, detail }, i) => (
@@ -416,6 +367,6 @@ export default async function HomePage() {
           </Button>
         </Reveal>
       </section>
-    </main>
+    </div>
   );
 }

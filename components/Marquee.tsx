@@ -13,23 +13,27 @@ interface MarqueeProps {
 
 const DEFAULT_ITEMS = ["Envíos a todo México", "Pago seguro", "Nueva colección", "Cambios hasta 7 días"];
 
-const VARIANT: Record<MarqueeVariant, { wrapper: string; text: string }> = {
+const VARIANT: Record<MarqueeVariant, { wrapper: string; text: string; focusRing: string }> = {
   sand: {
     wrapper: "bg-zoa-sand border-y border-zoa-line",
     text: "text-zoa-slate",
+    focusRing: "focus-visible:ring-zoa-slate",
   },
   slate: {
     wrapper: "bg-zoa-slate border-y border-zoa-line-inverse",
     text: "text-zoa-surface",
+    focusRing: "focus-visible:ring-zoa-surface",
   },
   wine: {
     wrapper: "bg-zoa-wine border-y border-zoa-line-inverse",
     text: "text-zoa-surface",
+    focusRing: "focus-visible:ring-zoa-surface",
   },
   /* v4.1 · Banda forest full-bleed (la única de la página, con cupo medido) */
   forest: {
     wrapper: "bg-zoa-forest border-y border-zoa-line-inverse",
     text: "text-zoa-surface",
+    focusRing: "focus-visible:ring-zoa-surface",
   },
 };
 
@@ -46,7 +50,9 @@ function Diamond() {
 /**
  * Banda marquee editorial: hairlines arriba/abajo, separadores de rombo,
  * animación lineal de 40s con pausa al hover (CSS puro).
- * Con `prefers-reduced-motion` se renderiza una versión estática centrada.
+ * Accesible: la banda es enfocable y la animación se pausa con `:focus`
+ * (además de hover); el `aria-label` lo explica. Con `prefers-reduced-motion`
+ * se renderiza una versión estática centrada.
  */
 export default function Marquee({
   variant = "sand",
@@ -58,36 +64,45 @@ export default function Marquee({
   // La variante estática RM solo se sirve tras montar (SSR y primer render: marquee).
   const rm = mounted && reduceMotion;
   const tone = VARIANT[variant];
+  const label = rm
+    ? `Avisos de la boutique: ${items.join(". ")}.`
+    : `Avisos de la boutique: ${items.join(". ")}. Banda en movimiento: al enfocarla, se pausa.`;
 
   return (
-    <div className={`w-full ${tone.wrapper} ${className}`} aria-hidden="true">
-      {rm ? (
-        <p
-          className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 py-3 text-center font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}
-        >
-          {items.map((item) => (
-            <span key={item}>{item}</span>
-          ))}
-        </p>
-      ) : (
-        <div className="marquee-wrap py-3">
-          <div className="marquee-track">
-            {/* Dos copias idénticas → bucle perfecto a -50% */}
-            {[0, 1].map((copy) => (
-              <div key={copy} className="flex items-center whitespace-nowrap">
-                {items.map((item, i) => (
-                  <span key={`${copy}-${i}`} className="flex items-center">
-                    <span className={`font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}>
-                      {item}
-                    </span>
-                    <Diamond />
-                  </span>
-                ))}
-              </div>
+    <div
+      tabIndex={0}
+      aria-label={label}
+      className={`marquee-band w-full cursor-default focus-visible:outline-none focus-visible:ring-2 ${tone.wrapper} ${tone.focusRing} ${className}`}
+    >
+      <div aria-hidden="true">
+        {rm ? (
+          <p
+            className={`flex flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 py-3 text-center font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}
+          >
+            {items.map((item) => (
+              <span key={item}>{item}</span>
             ))}
+          </p>
+        ) : (
+          <div className="marquee-wrap py-3">
+            <div className="marquee-track">
+              {/* Dos copias idénticas → bucle perfecto a -50% */}
+              {[0, 1].map((copy) => (
+                <div key={copy} className="flex items-center whitespace-nowrap">
+                  {items.map((item, i) => (
+                    <span key={`${copy}-${i}`} className="flex items-center">
+                      <span className={`font-sans text-[10px] uppercase tracking-[0.25em] ${tone.text}`}>
+                        {item}
+                      </span>
+                      <Diamond />
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

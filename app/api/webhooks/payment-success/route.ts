@@ -45,6 +45,56 @@ function extractEmailError(result: EmailSendResult): string | null {
 const fmt = (n: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(n);
 
+interface OrderSummary {
+  subtotal: number;
+  shipping: number;
+  discount: number;
+  discountLabel: string;
+  isVip: boolean;
+}
+
+/**
+ * Resumen de cobro del correo. Si el descuento viene explícito (campañas),
+ * se usa tal cual; si no, se deriva del total para no romper cupones legacy.
+ */
+function getOrderSummary(params: {
+  items: CartItem[];
+  total: number;
+  vipCode?: string;
+  discountAmount?: number;
+  couponCode?: string;
+}): OrderSummary {
+  const subtotal = params.items.reduce(
+    (sum, ci) => sum + ci.product.price * ci.quantity,
+    0,
+  );
+  const normalizedCode = (params.vipCode ?? "").trim().toUpperCase();
+  const isVip = normalizedCode === "PROBADOR";
+  const shipping =
+    normalizedCode === FREE_SHIPPING_CODE || subtotal >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : SHIPPING_FLAT;
+
+  const explicitDiscount =
+    typeof params.discountAmount === "number" &&
+    Number.isFinite(params.discountAmount) &&
+    params.discountAmount > 0
+      ? params.discountAmount
+      : 0;
+  const derivedDiscount = isVip ? 0 : Math.max(0, subtotal + shipping - params.total);
+  const discount = explicitDiscount > 0 ? explicitDiscount : derivedDiscount;
+
+  return {
+    subtotal,
+    shipping,
+    discount,
+    discountLabel: params.couponCode
+      ? `Descuento (${params.couponCode})`
+      : "Descuento",
+    isVip,
+  };
+}
+
 function baseWrapper(content: string): string {
   return `<!DOCTYPE html>
 <html lang="es">
@@ -121,14 +171,38 @@ function buildCustomerEmail(params: {
   total: number;
   paymentId: string | number;
   vipCode?: string;
+  discountAmount?: number;
+  couponCode?: string;
   orderId?: string;
   trackingNumber?: string | null;
   carrier?: string | null;
 }): string {
-  const { address, items, total, paymentId, vipCode, orderId, trackingNumber, carrier } = params;
-  const subtotal = items.reduce((s, ci) => s + ci.product.price * ci.quantity, 0);
-  const shipping = (vipCode ?? "").trim().toUpperCase() === FREE_SHIPPING_CODE || subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
-  const isVip = vipCode === "PROBADOR";
+  const {
+    address,
+    items,
+    total,
+    paymentId,
+    vipCode,
+    discountAmount,
+    couponCode,
+    orderId,
+    trackingNumber,
+    carrier,
+  } = params;
+  const { subtotal, shipping, discount, discountLabel, isVip } = getOrderSummary({
+    items,
+    total,
+    vipCode,
+    discountAmount,
+    couponCode,
+  });
+
+  const discountRow = !isVip && discount > 0
+    ? `<tr>
+        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${discountLabel}</td>
+        <td style="text-align:right;font-size:13px;color:#1C1917;">- ${fmt(discount)}</td>
+      </tr>`
+    : "";
 
   const trackingBlock = trackingNumber
     ? `<div style="background:#F0F7F0;padding:20px;margin-top:16px;border-left:3px solid #27ae60;">
@@ -166,6 +240,7 @@ function buildCustomerEmail(params: {
         <td style="font-size:13px;color:#6E655C;padding:4px 0;">Subtotal</td>
         <td style="text-align:right;font-size:13px;color:#6E655C;">${fmt(subtotal)}</td>
       </tr>
+      ${discountRow}
       <tr>
         <td style="font-size:13px;color:#6E655C;padding:4px 0;">Envío</td>
         <td style="text-align:right;font-size:13px;color:#6E655C;">${shipping === 0 ? "Gratis" : fmt(shipping)}</td>
@@ -205,6 +280,8 @@ function buildAdminEmail(params: {
   total: number;
   paymentId: string | number;
   vipCode: string;
+  discountAmount?: number;
+  couponCode?: string;
   status: string;
   orderId?: string;
   trackingNumber?: string | null;
@@ -212,7 +289,21 @@ function buildAdminEmail(params: {
   carrier?: string | null;
   skydropxError?: string | null;
 }): string {
-  const { address, items, total, paymentId, vipCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError } = params;
+  const { address, items, total, paymentId, vipCode, discountAmount, couponCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError } = params;
+  const { subtotal, shipping, discount, discountLabel, isVip } = getOrderSummary({
+    items,
+    total,
+    vipCode,
+    discountAmount,
+    couponCode,
+  });
+
+  const discountRow = !isVip && discount > 0
+    ? `<tr>
+        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${discountLabel}</td>
+        <td style="text-align:right;font-size:13px;color:#1C1917;">- ${fmt(discount)}</td>
+      </tr>`
+    : "";
 
   const shipBlock = trackingNumber
     ? `<div style="background:#F0F7F0;padding:16px 20px;margin-top:20px;border-left:3px solid #27ae60;">
@@ -233,7 +324,7 @@ function buildAdminEmail(params: {
     <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;margin:0 0 6px;">
       🛍️ Nuevo pedido recibido
     </h2>
-    <p style="font-size:13px;color:#6E655C;margin:0 0 24px;">Pago: <strong style="color:#1C1917;">${status.toUpperCase()}</strong> · Pedido: <strong style="color:#1C1917;">${orderId ?? `#${paymentId}`}</strong>${vipCode ? ` · VIP: ${vipCode}` : ""}</p>
+    <p style="font-size:13px;color:#6E655C;margin:0 0 24px;">Pago: <strong style="color:#1C1917;">${status.toUpperCase()}</strong> · Pedido: <strong style="color:#1C1917;">${orderId ?? `#${paymentId}`}</strong>${vipCode ? ` · Código: ${vipCode}` : ""}</p>
 
     <div style="background:#FAF8F5;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Cliente</p>
@@ -256,8 +347,22 @@ function buildAdminEmail(params: {
 
     ${itemsTable(items)}
 
+    ${!isVip ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+      <tr>
+        <td style="font-size:13px;color:#6E655C;padding:4px 0;">Subtotal</td>
+        <td style="text-align:right;font-size:13px;color:#6E655C;">${fmt(subtotal)}</td>
+      </tr>
+      ${discountRow}
+      <tr>
+        <td style="font-size:13px;color:#6E655C;padding:4px 0;">Envío</td>
+        <td style="text-align:right;font-size:13px;color:#6E655C;">${shipping === 0 ? "Gratis" : fmt(shipping)}</td>
+      </tr>
+    </table>` : `
+    <p style="font-size:13px;color:#C9A96E;margin:16px 0;">Depósito Probador a Domicilio VIP</p>`}
+
     <div style="background:#1C1917;color:#FAF8F5;padding:16px 20px;margin-top:20px;text-align:right;">
-      <p style="margin:0;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Total</p>
+      <p style="margin:0;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Total pagado</p>
       <p style="margin:4px 0 0;font-size:24px;font-family:Georgia,serif;">${fmt(total)}</p>
     </div>
 
@@ -280,6 +385,8 @@ export async function POST(req: NextRequest) {
       address:         ShippingAddress;
       total:           number;
       vipCode?:        string;
+      discountAmount?: number;
+      couponCode?:     string;
       orderId?:        string;
       trackingNumber?: string | null;
       labelUrl?:       string | null;
@@ -287,7 +394,7 @@ export async function POST(req: NextRequest) {
       skydropxError?:  string | null;
     };
 
-    const { paymentId, status, items, address, total, vipCode = "", orderId,
+    const { paymentId, status, items, address, total, vipCode = "", discountAmount, couponCode, orderId,
             trackingNumber, labelUrl, carrier, skydropxError } = body;
 
     if (!address?.email || !items?.length) {
@@ -301,14 +408,14 @@ export async function POST(req: NextRequest) {
         to: [address.email],
         replyTo: REPLY_TO,
         subject: `🎀 Confirmación de compra Zoa · #${paymentId}`,
-        html: buildCustomerEmail({ address, items, total, paymentId, vipCode, orderId, trackingNumber, carrier }),
+        html: buildCustomerEmail({ address, items, total, paymentId, vipCode, discountAmount, couponCode, orderId, trackingNumber, carrier }),
       }),
       getResend().emails.send({
         from: FROM_EMAIL,
         to: ADMIN_EMAILS,
         replyTo: address.email,
         subject: `🛍️ Nuevo pedido · ${address.fullName} · ${fmt(total)} · ${orderId ?? `#${paymentId}`}`,
-        html: buildAdminEmail({ address, items, total, paymentId, vipCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError }),
+        html: buildAdminEmail({ address, items, total, paymentId, vipCode, discountAmount, couponCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError }),
       }),
     ]);
 

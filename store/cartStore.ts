@@ -12,6 +12,7 @@ const VIP_CODE = "PROBADOR";
 const VIP_DEPOSIT_AMOUNT = 300; // MXN
 
 type DrawerView = "cart" | "checkout";
+export type CouponScope = "all" | "eligible";
 
 interface CartState {
   // ── Data ──────────────────────────────────────────────────────────────────
@@ -19,6 +20,8 @@ interface CartState {
   vipCode: string;
   couponDiscount: number; // % off (0-100)
   couponType: string; // "porcentaje" | "fijo" | "interno" | ""
+  /** "eligible" excluye piezas con descuento propio (campañas). */
+  couponScope: CouponScope;
   isOpen: boolean;
   drawerView: DrawerView;
 
@@ -36,7 +39,7 @@ interface CartState {
   removeItem: (productId: string, size: Size) => void;
   updateQuantity: (productId: string, size: Size, quantity: number) => void;
   setVipCode: (code: string) => void;
-  setCouponDiscount: (pct: number, type: string) => void;
+  setCouponDiscount: (pct: number, type: string, scope?: CouponScope) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -52,6 +55,7 @@ export const useCartStore = create<CartState>()(
       vipCode: "",
       couponDiscount: 0,
       couponType: "",
+      couponScope: "all",
       isOpen: false,
       drawerView: "cart",
 
@@ -71,7 +75,17 @@ export const useCartStore = create<CartState>()(
       discountAmount: () => {
         const pct = get().couponDiscount;
         if (!pct) return 0;
-        return Math.round((get().subtotal() * pct) / 100);
+        const base =
+          get().couponScope === "eligible"
+            ? get().items.reduce(
+                (sum, item) =>
+                  (item.product.discount ?? 0) > 0
+                    ? sum
+                    : sum + item.product.price * item.quantity,
+                0,
+              )
+            : get().subtotal();
+        return Math.round((base * pct) / 100);
       },
 
       total: () => {
@@ -147,11 +161,17 @@ export const useCartStore = create<CartState>()(
       },
 
       setVipCode: (code) => set({ vipCode: code }),
-      setCouponDiscount: (pct, type) =>
-        set({ couponDiscount: pct, couponType: type }),
+      setCouponDiscount: (pct, type, scope = "all") =>
+        set({ couponDiscount: pct, couponType: type, couponScope: scope }),
 
       clearCart: () =>
-        set({ items: [], vipCode: "", couponDiscount: 0, couponType: "" }),
+        set({
+          items: [],
+          vipCode: "",
+          couponDiscount: 0,
+          couponType: "",
+          couponScope: "all",
+        }),
 
       openCart: () => set({ isOpen: true, drawerView: "cart" }),
       closeCart: () => set({ isOpen: false }),
@@ -165,12 +185,15 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "zoa-cart",
-      // Only persist items, vipCode and coupon — not UI state
+      // Only persist items, vipCode and coupon — not UI state.
+      // Los carritos anteriores sin `couponScope` conservan el default "all"
+      // al fusionarse con el estado inicial de Zustand.
       partialize: (state) => ({
         items: state.items,
         vipCode: state.vipCode,
         couponDiscount: state.couponDiscount,
         couponType: state.couponType,
+        couponScope: state.couponScope,
       }),
     },
   ),

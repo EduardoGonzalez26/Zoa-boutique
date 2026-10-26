@@ -22,15 +22,17 @@ html { position: relative; }
   --color-zoa-sand:         #EAE9E5;
   --color-zoa-slate:        #2B3C42;
   --color-zoa-slate-900:    #1E2A2F;
-  --color-zoa-slate-60:     rgba(43, 60, 66, 0.62);
+  --color-zoa-slate-60:     rgba(43, 60, 66, 0.75);
   --color-zoa-line:         rgba(43, 60, 66, 0.16);
-  --color-zoa-line-strong:  rgba(43, 60, 66, 0.35);
+  --color-zoa-line-strong:  rgba(43, 60, 66, 0.60);
   --color-zoa-forest:       #003628;
   --color-zoa-forest-dark:  #00251B;
   /* v4.1 · Alfa de forest (acentos: hovers, bordes, numerales, focus) */
   --color-zoa-forest-08:    rgba(0, 54, 40, 0.08);
   --color-zoa-forest-16:    rgba(0, 54, 40, 0.16);
   --color-zoa-forest-35:    rgba(0, 54, 40, 0.35);
+  /* v4.3 · a11y: borde de controles (outline) ≥3:1 sobre arena — WCAG 1.4.11 */
+  --color-zoa-forest-55:    rgba(0, 54, 40, 0.55);
   --color-zoa-forest-60:    rgba(0, 54, 40, 0.62);
   --color-zoa-surface:      #FFF7F5;
   --color-zoa-wine:         #420D0D;
@@ -69,7 +71,7 @@ html { position: relative; }
 
   /* ── v4 · Tinta inversa (bandas slate y wine) ─────────────── */
   --color-zoa-line-inverse:      rgba(255, 247, 245, 0.16);
-  --color-zoa-line-inverse-35:   rgba(255, 247, 245, 0.35);
+  --color-zoa-line-inverse-35:   rgba(255, 247, 245, 0.45);
   --color-zoa-slate-inverse-60:  rgba(255, 247, 245, 0.62);
 }
 
@@ -232,6 +234,11 @@ button, input, textarea, select {
 .zoa-navbar[data-panel="true"] {
   --nc: var(--color-zoa-slate);
   --nc-hover: var(--color-zoa-forest);
+}
+/* Home, navbar transparente sobre video: sombra sutil para asegurar la
+   legibilidad de la tinta clara (WCAG AA sobre imagen en movimiento). */
+.zoa-navbar[data-home="true"]:not([data-scrolled="true"]):not([data-panel="true"]) {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Logo Zoa: wordmark SVG (public/logozoa.svg) como máscara recoloreable ──
@@ -414,14 +421,25 @@ button, input, textarea, select {
 .img-reveal.is-revealed > img,
 .img-reveal.is-revealed > .img-reveal-media { transform: scale(1); }
 
-/* ── Marquee lineal infinito (pausa al hover) ── */
+/* ── Banner de promoción: focal point responsive vía CSS vars ── */
+.promo-image {
+  object-position: var(--promo-pos-mobile, 50% 50%);
+}
+@media (min-width: 1024px) {
+  .promo-image {
+    object-position: var(--promo-pos-desktop, 50% 50%);
+  }
+}
+
+/* ── Marquee lineal infinito (pausa al hover y al enfocar la banda) ── */
 .marquee-wrap { overflow: hidden; }
 .marquee-track {
   display: flex;
   width: max-content;
   animation: zoa-marquee var(--marquee-duration, 40s) linear infinite;
 }
-.marquee-wrap:hover .marquee-track { animation-play-state: paused; }
+.marquee-wrap:hover .marquee-track,
+.marquee-band:focus-within .marquee-track { animation-play-state: paused; }
 @keyframes zoa-marquee {
   from { transform: translate3d(0, 0, 0); }
   to   { transform: translate3d(-50%, 0, 0); }

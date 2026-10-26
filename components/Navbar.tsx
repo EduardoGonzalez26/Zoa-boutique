@@ -9,6 +9,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useRouter, usePathname } from "next/navigation";
 import Button from "@/components/ui/Button";
 import useMounted from "@/components/ui/useMounted";
+import useFocusTrap from "@/components/ui/useFocusTrap";
 import type { BestSeller } from "@/lib/types";
 
 const CATEGORIES = [
@@ -94,6 +95,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
   const [searchExiting, setSearchExiting] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const desktopNavRef = useRef<HTMLElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   // `useMounted` (compartido) evita mismatches con el carrito persistido y con RM:
   // `false` en SSR y primer render del cliente.
@@ -165,6 +167,14 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [closeMenu, closeSearch]);
+
+  // Drawer móvil: trap de Tab, foco inicial, Escape y devolución del foco
+  // al botón que lo abrió (el scroll lock del body lo maneja el hook).
+  useFocusTrap(mobileOpen, drawerRef, () => {
+    setMobileOpen(false);
+    closeSearch();
+    closeMenu();
+  });
 
   // Click fuera del nav desktop cierra el mega menú
   useEffect(() => {
@@ -310,9 +320,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                   <li key={key} className="list-none">
                     <button
                       type="button"
-                      aria-haspopup="true"
                       aria-expanded={openMenu === key}
-                      aria-controls="mega-menu"
                       onClick={() => (openMenu === key ? closeMenu() : showMenu(key))}
                       onMouseEnter={() => showMenu(key)}
                       className={NAV_ITEM}
@@ -345,7 +353,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
               className="flex h-11 w-11 cursor-pointer items-center justify-center transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
               style={{ color: "var(--nc)" }}
             >
-              <Search size={18} strokeWidth={1.4} />
+              <Search size={18} strokeWidth={1.4} aria-hidden />
             </button>
 
             <button
@@ -385,7 +393,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
               aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={mobileOpen}
             >
-              {mobileOpen ? <X size={20} strokeWidth={1.4} /> : <Menu size={20} strokeWidth={1.4} />}
+              {mobileOpen ? <X size={20} strokeWidth={1.4} aria-hidden /> : <Menu size={20} strokeWidth={1.4} aria-hidden />}
             </button>
           </div>
         </div>
@@ -604,7 +612,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                   }}
                   placeholder="Buscar blusas, vestidos, sweaters…"
                   aria-label="Buscar productos"
-                  className="min-h-11 flex-1 bg-transparent font-sans text-sm text-zoa-slate placeholder:text-zoa-slate-60 focus:outline-none"
+                  className="min-h-11 flex-1 bg-transparent font-sans text-sm text-zoa-slate placeholder:text-zoa-slate-60"
                 />
                 <button
                   type="submit"
@@ -618,7 +626,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                   aria-label="Cerrar búsqueda"
                   className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
                 >
-                  <X size={16} />
+                  <X size={16} aria-hidden />
                 </button>
               </form>
             </motion.div>
@@ -629,6 +637,11 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
+              ref={drawerRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Menú de navegación"
+              tabIndex={-1}
               initial={rm ? { opacity: 1 } : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={rm ? { opacity: 1 } : { opacity: 0 }}
@@ -644,7 +657,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                   aria-label="Cerrar menú"
                   className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate transition-opacity duration-200 hover:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
                 >
-                  <X size={20} strokeWidth={1.4} />
+                  <X size={20} strokeWidth={1.4} aria-hidden />
                 </button>
               </div>
 
@@ -665,7 +678,7 @@ export default function Navbar({ bestSellers = [] }: { bestSellers?: BestSeller[
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar"
                       aria-label="Buscar productos"
-                      className="min-h-11 flex-1 bg-transparent font-sans text-xs text-zoa-slate placeholder:text-zoa-slate-60 focus:outline-none"
+                      className="min-h-11 flex-1 bg-transparent font-sans text-xs text-zoa-slate placeholder:text-zoa-slate-60"
                     />
                     <button
                       type="submit"

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     siteName: "Zoa",
     locale: "es_MX",
     type: "website",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "Zoa — Moda Femenina" }],
+    images: [{ url: "/bannerzoa.png", width: 2752, height: 1536, alt: "Zoa — Moda Femenina" }],
   },
   twitter: { card: "summary_large_image", title: "Zoa — Moda Femenina", description: "Boutique de moda femenina · Envíos a todo México." },
   alternates: { canonical: "https://zoa.mx" },
@@ -59,6 +59,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es" className={`${archivo.variable} ${bodoniModa.variable}`} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-zoa-sand text-zoa-slate font-sans">
+        {/* Skip link: visible al enfocar con teclado (WCAG 2.4.1) */}
+        <a
+          href="#contenido"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:bg-zoa-sand focus:px-4 focus:py-2 font-sans text-[11px] uppercase tracking-[0.18em] text-zoa-slate"
+        >
+          Saltar al contenido
+        </a>
         <Navbar bestSellers={bestSellers} />
         {/* Runs synchronously right after Navbar HTML is in the DOM, before paint.
             Sets data-home and --nc so the CSS rule fires correctly pre-hydration. */}
@@ -69,7 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <CartDrawer />
         <WhatsAppButton />
-        <main className="flex-1">{children}</main>
+        <main id="contenido" tabIndex={-1} className="flex-1 outline-none">{children}</main>
         <CTABanner />
         <Footer />
       </body>

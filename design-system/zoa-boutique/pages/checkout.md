@@ -21,6 +21,14 @@
 - `success`: ícono `CheckCircle` en `--color-zoa-success` (forest).
 - `failure`: ícono `XCircle` wine + leyenda wine italic "Tu bolsa sigue intacta". Sin banda wine.
 
+## Cupones de campaña
+
+- Los cuatro códigos de campaña (**AMOR15**, **MAMA15**, **BUENFIN15**, **NAVIDAD15**) dan **15% OFF** y solo son válidos dentro de su ventana anual (America/Mexico_City; NAVIDAD15 cruza año hasta el 1 de enero).
+- **No son acumulables** con otros cupones, VIP ni envío gratis (un solo código a la vez).
+- **No aplican a piezas ya rebajadas**: el descuento se calcula solo sobre las piezas sin `discount` propio; el resumen muestra la nota «El 15% aplica solo a piezas sin promoción.» cuando hay piezas excluidas.
+- El resumen del drawer y de `/checkout`, y el recibo por correo, muestran **Subtotal · Descuento (código/%) · Envío · Total pagado**. El servidor revalida catálogo, ventana y total antes de crear el pago.
+- Quick Buy y Checkout Pro no aplican cupones de campaña.
+
 ## Reglas
 
 - El cierre global de estas páginas es el **CTABanner forest**; no añadir otra banda forest ni bandas wine.

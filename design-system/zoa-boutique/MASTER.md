@@ -45,9 +45,9 @@ Boutique de moda femenina mexicana, editorial y segura. Ley visual v4.2:
 | Token | Valor | Uso |
 |---|---|---|
 | `--color-zoa-slate-900` | `#1E2A2F` | Hover/pressed sobre superficies pizarra; color de marca del Payment Brick |
-| `--color-zoa-slate-60` | `rgba(43,60,66,0.62)` | Texto secundario/muted y metadatos. El copy esencial va en slate pleno |
+| `--color-zoa-slate-60` | `rgba(43,60,66,0.75)` | Texto secundario/muted y metadatos (≈4.8:1 sobre arena). El copy esencial va en slate pleno |
 | `--color-zoa-line` | `rgba(43,60,66,0.16)` | Hairline estándar (divisores de 1px) |
-| `--color-zoa-line-strong` | `rgba(43,60,66,0.35)` | Hairline interactivo (bordes de input/botón outline) |
+| `--color-zoa-line-strong` | `rgba(43,60,66,0.60)` | Hairline interactivo (bordes de input/botón outline; ≈3.2:1 sobre arena) |
 | `--color-zoa-forest-dark` | `#00251B` | Hover del botón verde y del FAB |
 | `--color-zoa-success` | `#003628` | Confirmaciones (texto o borde; cupón válido, dirección validada). Es el mismo forest |
 | `--color-zoa-error` | `#420D0D` | Errores de formulario (borde/texto, sin fondo). Es el mismo wine |
@@ -56,7 +56,8 @@ Boutique de moda femenina mexicana, editorial y segura. Ley visual v4.2:
 
 | Token | Valor | Uso verificado |
 |---|---|---|
-| `--color-zoa-forest-35` | `rgba(0,54,40,0.35)` | Borde/atenuación de acento: `outline`, badges NUEVO, hairline de la barra sticky del PDP, drag handle del carrito, `.hairline-forest`, botón Filtrar, CTA outline del `EmptyState` |
+| `--color-zoa-forest-35` | `rgba(0,54,40,0.35)` | Atenuación **decorativa** de acento: badges NUEVO, hairline de la barra sticky del PDP, drag handle del carrito, `.hairline-forest`. **Nunca bordes de control** |
+| `--color-zoa-forest-55` | `rgba(0,54,40,0.55)` | Borde de **control** interactivo (≈3.2:1 sobre arena, WCAG 1.4.11): `outline` del kit, "Comprar ahora" del PDP, botón Filtrar de tienda, CTA outline del `EmptyState`, botón del newsletter |
 | `--color-zoa-forest-08` | `rgba(0,54,40,0.08)` | Definido y disponible; **sin consumidores en el código actual** |
 | `--color-zoa-forest-16` | `rgba(0,54,40,0.16)` | Definido y disponible; **sin consumidores en el código actual** |
 | `--color-zoa-forest-60` | `rgba(0,54,40,0.62)` | Definido y disponible; **sin consumidores en el código actual** |
@@ -72,7 +73,7 @@ Utilidades v4.2 (nombres exactos en `globals.css`):
 | Token | Valor | Uso |
 |---|---|---|
 | `--color-zoa-line-inverse` | `rgba(255,247,245,0.16)` | Hairline inverso sobre banda |
-| `--color-zoa-line-inverse-35` | `rgba(255,247,245,0.35)` | Hairline inverso fuerte / borde de caja de cupón |
+| `--color-zoa-line-inverse-35` | `rgba(255,247,245,0.45)` | Hairline inverso fuerte / borde de caja de cupón sobre banda (≈3.4:1 sobre wine) |
 | `--color-zoa-slate-inverse-60` | `rgba(255,247,245,0.62)` | Texto muted inverso (overlines, copy secundario sobre banda) |
 
 Utilidades: `.hairline`, `.hairline-t/-b/-l/-r` (arena) y `.hairline-inverse`, `.hairline-inverse-t/-b/-l/-r` (bandas).
@@ -84,9 +85,9 @@ Forest es **acción + acento sobre superficies claras**, con un **cupo de exacta
 - **Acción**: fondo del botón `primary`, CTA de compra/pago, FAB de WhatsApp, `Chip variant="forest"`, talla seleccionada, filtro activo.
 - **Acento (texto/ícono/borde, siempre sobre arena u off-white)**: numeral de índice del `Overline` (tone default), overlines de categoría (blog/legal/checkout), cifras métricas de la home, íconos de promesas, íconos de confianza del PDP, hovers del navbar (`--nc-hover`), badge de bolsa, rombos del anuncio, `.rule-forest`, numerales + barra activa 2px + itálica activa de `CollectionIndex`, badge NUEVO + "VER PRODUCTO" + tallas disponibles de `ProductCard`, estados activos de `TiendaClient`, "Disponible" del PDP, contador y drag handle del carrito, overlines/hovers/logo del footer, hovers del blog y páginas legales.
 - **Banda full-bleed (1 por página)**: home → `Marquee variant="forest"` (el `CTABanner` de la home queda **slate**); resto de páginas → `CTABanner` **forest**. La alternancia vive en `CTABanner.tsx` con `usePathname()`. No puede haber una segunda banda forest en la misma vista.
-- **`Button`**: `outline` = borde `forest-35` + texto forest + hover invierte a fondo forest con tinta off-white; `link-arrow` default = forest (`tone="inverse"` para bandas); `inverse` = fondo off-white + **texto forest** + hover sand; focus ring forest en variantes claras y off-white/surface sobre bandas oscuras.
+- **`Button`**: `outline` = borde `forest-55` + texto forest + hover invierte a fondo forest con tinta off-white; `link-arrow` default = forest (`tone="inverse"` para bandas); `inverse` = fondo off-white + **texto forest** + hover sand; focus ring forest en variantes claras y off-white/surface sobre bandas oscuras.
 - **`:focus-visible` global = forest** (outline 2px, offset 2, también en `.carousel-wrap` con offset 4). **Regla de auditoría**: sobre bandas oscuras (slate/wine/forest), foto o video el anillo forest se sustituye siempre por un anillo off-white/surface explícito (`ring-zoa-surface`, `ring-current` sobre video, `tone="inverse"`); el forest nunca se pinta sobre oscuro (1.17:1).
-- **Velo del hero**: capas alfa del MISMO slate (`rgba(43,60,66,0.30)` + `rgba(43,60,66,0.55)` enmascarada). Es la única forma de "gradiente" permitida: alfa de un solo color o máscara de legibilidad.
+- **Velo del hero**: capas alfa del MISMO slate (`rgba(43,60,66,0.30)` + `rgba(43,60,66,0.62)` enmascarada). Es la única forma de "gradiente" permitida: alfa de un solo color o máscara de legibilidad. (El segundo velo subió de 0.55 a 0.62 el 2026-09-29 por contraste de titular/copy sobre video.)
 - **Prohibiciones vigentes**: forest sobre slate/wine/foto/video (≈1.17:1), forest en párrafos largos, **2 bandas forest en la misma página**, forest en swatches de color o en hairlines estructurales (esos siguen slate).
 
 ### 1.6 Contraste (verificado WCAG AA)
@@ -97,6 +98,22 @@ Forest es **acción + acento sobre superficies claras**, con un **cupo de exacta
 - Muted inverso (`slate-inverse-60`) ≈ **5.3:1** sobre slate y ≈ **6.5:1** sobre wine.
 - Forest sobre slate/wine ≈ **1.17:1** → **PROHIBIDO**.
 - PROHIBIDO además: blanco puro `#FFFFFF` en cualquier forma; degradados multicolor; vino como fondo fuera de su banda full-bleed única.
+
+### 1.7 Nota de accesibilidad — contraste y consentimiento (2026-09-29)
+
+Ajustes aprobados para cumplir **WCAG 2.1 AA**: 1.4.3 (texto ≥4.5:1) y 1.4.11 (componentes/estados ≥3:1). La ley de color no cambia (mismos matices, solo alfa).
+
+| Token | Antes | Ahora | Ratio estimado |
+|---|---|---|---|
+| `--color-zoa-slate-60` | `rgba(43,60,66,0.62)` | `rgba(43,60,66,0.75)` | ≈4.8:1 sobre arena · ≈5.4:1 sobre superficie |
+| `--color-zoa-line-strong` | `rgba(43,60,66,0.35)` | `rgba(43,60,66,0.60)` | ≈3.2:1 (borde de input/controles) |
+| `--color-zoa-forest-55` (nuevo) | — | `rgba(0,54,40,0.55)` | ≈3.2:1 sobre arena (borde de control) |
+| `--color-zoa-line-inverse-35` | `rgba(255,247,245,0.35)` | `rgba(255,247,245,0.45)` | ≈3.4:1 sobre wine (borde de chip/cupón) |
+
+- `placeholder:text-zoa-slate-60/60` se elimina en todo el código (placeholders al token pleno, mismo ratio que el muted).
+- `forest-35` queda **solo decorativo** (hairlines, separadores, badges, drag handle); todo borde que es el affordance principal de un control usa `forest-55`.
+- Refuerzos sobre video: `text-shadow` en el navbar transparente de la home y velo inferior del hero al 62% (ver §1.5).
+- Consentimiento en formularios: checkbox obligatorio con enlaces a `/privacidad` y `/terminos` en checkout (page y drawer), y aviso de publicación + enlace a `/privacidad` en reseñas; el newsletter muestra microcopy de WhatsApp + `/privacidad`. El gate del bloque de pago queda en `addressValid && accepted` y el POST incluye `consent: { privacy, terms, acceptedAt }`.
 
 ---
 
@@ -151,7 +168,7 @@ Cargadas con `next/font/google` en `app/layout.tsx`:
 
 | Componente | Variantes / props clave | Especificación |
 |---|---|---|
-| **`Button`** | `primary`, `outline`, `ghost-inverse`, `inverse`, `link-arrow`; `size` `md` (h-12 px-7) / `lg` (h-14 px-9); `href`/`external`/`onClick`/`type`/`disabled`/`icon`; `tone` para `link-arrow` | Radio 2px, Archivo 11px/500/0.18em, `active:translate-y-px`, focus ring 2px offset 2. `primary` forest; **`outline` = borde `forest-35` + texto forest → invertido a fondo forest al hover**; `inverse` = fondo off-white + **texto forest** + hover sand (CTA sobre banda oscura); `ghost-inverse` = borde off-white/60 sobre imagen; `link-arrow` default forest, `tone="inverse"` off-white |
+| **`Button`** | `primary`, `outline`, `ghost-inverse`, `inverse`, `link-arrow`; `size` `md` (h-12 px-7) / `lg` (h-14 px-9); `href`/`external`/`onClick`/`type`/`disabled`/`icon`; `tone` para `link-arrow` | Radio 2px, Archivo 11px/500/0.18em, `active:translate-y-px`, focus ring 2px offset 2. `primary` forest; **`outline` = borde `forest-55` (≥3:1) + texto forest → invertido a fondo forest al hover**; `inverse` = fondo off-white + **texto forest** + hover sand (CTA sobre banda oscura); `ghost-inverse` = borde off-white/60 sobre imagen; `link-arrow` default forest, `tone="inverse"` off-white |
 | **`Reveal`** | `as`, `delay`, `y` (28), `offset` (stagger 70ms, máx. 8), `once` | Entrada al viewport: opacity 0→1, y 28→0, 700ms `--ease-out-expo`, `margin:"-80px"` |
 | **`ImageReveal`** | `src`, `alt`, `sizes` (**obligatorio**), `priority`, `className`, `imgClassName`, `delay`, `offset`, `decorative` | `.img-reveal`: `clip-path` `inset(10% 0 0 0)`→`0` + zoom 1.06→1, 950ms expo. Fondo off-white mientras carga |
 | **`SectionHeader`** | `index`, `overline`, `title`, `action {label,href}`, `tone`, `children` | Overline numerada (numeral forest) + título Display 1 + acción `link-arrow`; cierra con `hairline-b` (o `hairline-inverse-b`) |
@@ -159,8 +176,9 @@ Cargadas con `next/font/google` en `app/layout.tsx`:
 | **`Chip`** | `sand`, `outline`, `inverse`, **`forest`**; `onRemove`, `leading` | 10px/0.16em, radio 2px, px-3 py-2. `forest` = **fondo forest + tinta off-white** (filtro activo); con `onRemove` es botón removible con X, touch target ≥44px y focus ring según variante |
 | **`Accordion`** | `items {id,label,content}`, `defaultOpenId`, `single`, `tone` | Hairlines, `aria-expanded`/`aria-controls`, chevron 300ms que **se pinta forest al abrir** (tono claro), altura animada 320ms expo; apertura instantánea con reduced-motion |
 | **`EmptyState`** | `overline` (def. "Sin resultados"), `title`, `description`, `action {label,href,onClick}`, `tone` | Overline + título Display 2 + CTA **outline forest** (inversión completa al hover); `py-20 md:py-28`, `hairline-t` |
+| **`PromoCode`** | `code`, `label` (def. "Código"), `tone` `inverse`/`default` | Caja hairline (`inverse-35` sobre banda wine), radio 2px, sin sombra. Código `select-all` + tracking 0.3em; botón separado por hairline izquierda, `min-h-11`/`min-w-11`, iconos Copy/Check y texto "Copiar"/"Copiado". Clipboard API con fallback `textarea` + `execCommand("copy")`; error visible con el código seleccionado; anuncia en `role="status"` + `aria-live="polite"`. Foco `ring-zoa-surface` sobre wine (nunca forest sobre oscuro). |
 
-Componentes de dominio que consumen el kit: `HeroSection`, `Navbar`, `ProductCard`, `TiendaClient`, `ProductGalleryClient`, `CartDrawer`, `CTABanner`, `Footer`, `CollectionIndex`, `BlogCard`, `ReadingProgress`, `Marquee`, `NewsletterForm`, `WhatsAppButton`.
+Componentes de dominio que consumen el kit: `HeroSection`, `Navbar`, `ProductCard`, `TiendaClient`, `ProductGalleryClient`, `CartDrawer`, `PromoBanner`, `CTABanner`, `Footer`, `CollectionIndex`, `BlogCard`, `ReadingProgress`, `Marquee`, `NewsletterForm`, `WhatsAppButton`.
 
 ---
 
@@ -206,7 +224,7 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 
 - **Fila superior real**: Logo (`logozoa.svg` enmascarado con `.zoa-logo` sobre `--nc`/`--nc-hover`; **sólido** 71×22 px < lg y 84×26 px ≥ lg; con **navbar transparente** —home sin scroll y sin paneles— crece a 84×26 px < lg y 97×30 px ≥ lg) · **Inicio · Colecciones ▾ · Categorías ▾ · Tienda ▾** · lupa · bolsa. **Blog y Rastrear envío ya NO están en la fila**: viven dentro del grupo **Tienda** (mega menú desktop y drawer móvil).
 - **Barra de anuncio** (arena, marquee 38s, rombos hairline forest) que colapsa a `h-0` al scroll; **barra de progreso de scroll 1px forest** en el borde superior (reduced-motion: `forest/35` estático).
-- **Estados de tinta**: sobre el hero de la home sin scroll y sin paneles, off-white (`--nc`, hover off-white/72); nav sólido (`data-scrolled`, `data-panel` o página interna), slate con **hover forest** (`--nc-hover`). Un panel desplegado (mega menú o búsqueda) siempre pinta la navbar sólida —nunca queda sobre una navbar transparente— y `Navbar.tsx` escribe `--nc`/`--nc-hover` inline desde un único booleano `solidNav`. Un script inline en `layout.tsx` fija `data-home`/`--nc` antes de la hidratación.
+- **Estados de tinta**: sobre el hero de la home sin scroll y sin paneles, off-white (`--nc`, hover off-white/72) con `text-shadow` sutil para asegurar contraste sobre video; nav sólido (`data-scrolled`, `data-panel` o página interna), slate con **hover forest** (`--nc-hover`). Un panel desplegado (mega menú o búsqueda) siempre pinta la navbar sólida —nunca queda sobre una navbar transparente— y `Navbar.tsx` escribe `--nc`/`--nc-hover` inline desde un único booleano `solidNav`. Un script inline en `layout.tsx` fija `data-home`/`--nc` antes de la hidratación.
 - **Un solo panel full-bleed `#mega-menu`** (off-white, `hidden` bajo `md`) que renderiza **solo el grupo activo** (`OpenMenu = "collections" | "categories" | "shop"`); `motion.div key={openMenu}` con fade de 180ms **sin `mode="wait"`**; el chevron rota solo el trigger activo; `role="region"` + `aria-label` por menú; abre con `onMouseEnter`, alterna por click (touch/teclado) y cierra con Escape, click-outside o al salir del header con el puntero; títulos con `.rule-forest`; links con **hairline propia (`border-b` solo en `MEGA_LINK`/links, nunca en el `li`) + hover tenue `slate/5`** y viraje a forest.
   - **Colecciones**: lista 01–05 + **"Lo más vendido"** en `xl` con `link-arrow`. El bloque muestra un **crossfade de las 4 prendas más vendidas** (foto principal del catálogo, enlace al PDP, avance cada 4 s; estático con reduced motion o una sola prenda) calculadas por `getBestSellers()` (`lib/googleSheets.ts`) desde la pestaña **Ventas** y pasadas como prop desde `layout.tsx`. Sin datos cae al poster del clip `two-models-walking` (cloud `ppo6ze2s`).
   - **Categorías**: grid de 3 columnas con gutter real `md:gap-x-6` (cada hairline queda como segmento propio) + CTA.
@@ -214,7 +232,9 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 - **Bolsa**: badge forest solo en móvil (`md:hidden`, "99+" si >99) y label "Bolsa (N)" en desktop; la lupa abre el panel de búsqueda (focos slate, sin forest).
 - **Drawer móvil espejo** full-screen off-white: búsqueda → Inicio (numeral 01 forest) → Colecciones (numerales forest) → Categorías (2 columnas con `gap-x-4`) → Tienda → contacto, con hovers forest de fondo tenue `slate/5`.
 
-### 6.1 Home — 9 bloques (`app/page.tsx`)
+### 6.1 Home — 8 bloques fijos + 1 condicional (`app/page.tsx`)
+
+Orden: Hero → Marquee forest → Intro → Destacado → Colecciones → **Promo (si activa)** → Carruseles 01–06 → Promesas → CTA slate.
 
 | # | Bloque | Estructura | Notas |
 |---|---|---|---|
@@ -223,15 +243,15 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 | 3 | **Intro editorial** | Overline "La casa" + statement Display 1 (una itálica) + lead + 3 métricas Bodoni tabular **forest** | Métricas: 100+ piezas · 3–5 días · $3,000; hairlines verticales |
 | 4 | **Destacado** | Grid 12: imagen 8 / panel 4; `ImageReveal` 3/4→16/11→5/4 | CTA `link-arrow` "Ver la pieza" (forest) + `outline` "Toda la colección" (inversión forest) |
 | 5 | **Índice de colecciones** | `SectionHeader` + `CollectionIndex`: lista 7 / preview sticky 5 (`pointer-fine-only`) | Preview 520px `top-32`; numerales forest, activa con barra 2px + itálica Bodoni forest; en táctil la lista es autosuficiente |
-| 6 | **Carruseles 01–06** | `SectionHeader` numerado + `.carousel-wrap` **container-bound** con `ProductCard` | 01 Lo nuevo · 02 Lo más pedido · 03 Blusas · 04 Sweaters · 05 Pantalones · 06 De Temporada; mismo filtro/slice que v3 |
-| 7 | **Banda wine · Día de las Madres** | Full-bleed; grid 12: texto 7 / imagen 5; caja de cupón `hairline-inverse-35` | **Única banda wine de la home**; CTA `inverse` size lg |
+| 6 | **Banda wine · campaña estacional (condicional)** | Full-bleed; grid 12: texto 7 / imagen 5 (texto primero en móvil); `PromoBanner` con `Overline tone="inverse"`, H2 Display 1, `PromoCode`, CTA `inverse` y términos | **Única banda wine de la home**. Se renderiza solo si `getActivePromo()` devuelve campaña dentro de su ventana anual en America/Mexico_City; fuera de temporada **no se renderiza nada** (0 bandas wine) y los carruseles siguen directo. No añadir otra |
+| 7 | **Carruseles 01–06** | `SectionHeader` numerado + `.carousel-wrap` **container-bound** con `ProductCard` | 01 Lo nuevo · 02 Lo más pedido · 03 Blusas · 04 Sweaters · 05 Pantalones · 06 De Temporada; mismo filtro/slice que v3 |
 | 8 | **Promesas de servicio** | 3 columnas hairline + cierre editorial; íconos **forest** | `link-arrow` "Leer el blog" |
 | 9 | **CTABanner slate** | Global desde `layout.tsx` | Cierre editorial antes del footer |
 
 ### 6.2 Tienda (`TiendaClient.tsx`)
 
 - Header editorial: breadcrumb hairline, `Overline` (categoría o "Catálogo completo"), H1 Display 1, conteo tabular con **cifra forest**.
-- Controles: **orden** client-side (recomendado, precio ↑/↓, novedades) con foco forest; **densidad 2/3/4** (solo desktop; activo en slate, sin cambios); botón "Filtrar" móvil **borde `forest-35` + texto forest + contador forest**.
+- Controles: **orden** client-side (recomendado, precio ↑/↓, novedades) con foco forest; **densidad 2/3/4** (solo desktop; activo en slate, sin cambios); botón "Filtrar" móvil **borde `forest-55` + texto forest + contador forest**.
 - **Sidebar desktop** `w-56`, sticky `top-28`; **bottom sheet móvil** `max-h-[88svh]` con **drag handle 1px forest (pleno)**, scroll interno y bloque sticky de confirmación (CTA forest "Ver N piezas" + "Limpiar" outline slate).
 - **Filtros activos en forest**: fila con **barra de 2px (`w-0.5 h-3.5`)** + texto forest; **talla seleccionada con fondo forest**; **`Chip variant="forest"`** (categoría, colección, talla, color con swatch `leading`, búsqueda) + "Limpiar todo" slate. `EmptyState` con acción outline forest.
 - Grid: `gap-x-4 md:gap-x-6`, `gap-y-12 md:gap-y-16`; cada card con `Reveal offset={idx % 8}`; animación `layout` al filtrar.
@@ -250,7 +270,7 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 
 - **Bottom sheet móvil** (`max-h: 95svh`, drag handle **`forest-35`**) / **full-height desktop** (md+), fondo arena, borde hairline.
 - Vista `cart`: ítems con thumb 4/5 sobre off-white; steppers 44px; **contador "N piezas" en forest**; **progreso de envío gratis 1px forest** (umbral $3,000) + leyenda wine italic; cupón editorial (**válido = `--color-zoa-success`, forest**; error = wine); resumen tabular; CTA forest full-width "Finalizar compra" + `outline` "Seguir comprando"; flujo VENDIDO.
-- Vista `checkout`: formulario de envío con autocompletado, aviso de entrega, mini resumen y Payment Brick (overrides en `globals.css`; `baseColorFirstVariant #003628`). Los inputs del formulario enfocan **slate** (sin acento forest).
+- Vista `checkout`: formulario de envío con autocompletado, aviso de entrega, checkbox obligatorio de consentimiento (Aviso de Privacidad/Términos con enlaces), mini resumen y Payment Brick (overrides en `globals.css`; `baseColorFirstVariant #003628`). El Brick solo se monta con `addressValid && accepted`; los inputs del formulario enfocan **slate** (sin acento forest).
 - `/checkout`: **desviación existente**: `mx-auto max-w-6xl px-5 md:px-10` en vez de `.container-zoa`; grid `[1fr_400px]`, resumen sticky `top-24` con hairline; overlines de sección en `overline-forest`.
 - `/checkout/success` y `/checkout/failure`: tarjeta centrada `max-w-md` con `.hairline`, overline **forest**, CTA forest; failure usa ícono wine y leyenda italic wine.
 
@@ -283,7 +303,7 @@ Tokens en `app/globals.css`: `--ease-out-expo: cubic-bezier(0.16,1,0.3,1)`, `--e
 - Micro-índice `01`… en slate-60 arriba a la derecha; **badge NUEVO = borde `forest-35` + texto forest**; AGOTADO = borde `line-strong` + slate.
 - Marquesina "VER PRODUCTO" en strip arena/94% con **texto forest**, visible solo al hover.
 - Info en slate: categoría, nombre (subrayado slate), precio tabular; leyenda de urgencia en wine italic.
-- **Micro-fila de tallas** (no interactiva; visible al hover en pointer fino, o siempre con reduced-motion): disponibles en **forest**, agotadas en slate-60 tachadas opacity-40.
+- **Micro-fila de tallas** (no interactiva; visible al hover en pointer fino, o siempre con reduced-motion): disponibles en **forest**, agotadas en slate-60 tachadas (sin atenuación extra, para conservar contraste).
 - Swatches de color: círculos semánticos con **anillo activo slate**; el forest no entra en swatches.
 
 ---

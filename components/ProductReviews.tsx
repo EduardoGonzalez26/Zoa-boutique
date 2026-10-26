@@ -1,12 +1,14 @@
 "use client";
 
-// ── ProductReviews — deterministic demo reviews + real verified reviews ────────
+// ── ProductReviews — reseñas reales de clientas ────────────────────────────────
 // Real reviews come from the "Reseñas" sheet (via /api/reviews).
 // Customers can submit a review after verifying their order number.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, ShieldCheck, CheckCircle2 } from "lucide-react";
+import useFocusTrap from "@/components/ui/useFocusTrap";
 
 interface Review {
   name:     string;
@@ -14,58 +16,6 @@ interface Review {
   text:     string;
   date:     string;
   verified?: boolean;
-}
-
-// ── Demo pools (same as before) ───────────────────────────────────────────────
-const NAMES = [
-  "Andrea López", "Bertha Santiago", "Fernanda Gómez", "Macarena García",
-  "Cristina Ortega", "Valeria Reyes", "Daniela Hernández", "Patricia Morales",
-  "Sofía Rojas", "Mariana Torres", "Alejandra Vega", "Carmen Ruiz",
-  "Isabel Mendoza", "Lorena Castillo", "Gabriela Flores", "Lucía Ramírez",
-  "Mónica Jiménez", "Karla Sánchez", "Diana Herrera", "Rosa Núñez",
-];
-const TEXTS = [
-  "Me llegó rapido y la tela es muy bonita 💕",
-  "La talla me quedó perfecta, se ve muy elegante",
-  "Muy bonita, ya es mi segunda compra aquí y siempre quedo satisfecha",
-  "Hermosa!! La recomiendo al 100, la calidad es excelente",
-  "Me encantó aunque tardó un poquito más el envío de lo esperado",
-  "La tela no se arruga fácil, ideal para viajes ✔️",
-  "Perfecta para una cena especial, quedé encantada 🖤",
-  "Muy linda, le queda bien a mi tipo de cuerpo. Muy buena calidad",
-  "Se ve cara pero el precio es muy accesible. Ampliamente recomendada",
-  "Ya la recompré en otro color 😍 me encanta cómo cae",
-  "La recibí muy bien empacada y la calidad supera mis expectativas",
-  "Pidan una talla menos si son entre tallas, por lo demás perfecta",
-  "Me la compré para regalar y quedó encantada con ella",
-  "Combina con todo, muy versátil. La atención al cliente también muy bien",
-  "La calidad es increíble, no se compara con otras tiendas online",
-  "La tela se siente premium, muy suave al tacto",
-  "Justo lo que buscaba, estoy muy contenta con mi compra",
-  "El color en persona es aún más bonito que en las fotos",
-  "Me la puse al día siguiente que llegó, no me la quería quitar jaja",
-  "Excelente relación calidad-precio, volvería a comprar sin dudarlo",
-];
-const RATINGS = [5, 5, 5, 4.5, 5, 4.8, 5, 4.7, 5, 4.5];
-const DATES   = [
-  "Hace 2 días", "Hace 4 días", "Hace 1 semana", "Hace 10 días",
-  "Hace 2 semanas", "Hace 3 semanas", "Hace 1 mes", "Hace 6 semanas",
-];
-
-function hash32(str: string)  { let h=5381; for(let i=0;i<str.length;i++) h=Math.imul(h,33)^str.charCodeAt(i); return h>>>0; }
-function hash32b(str: string) { let h=0x811c9dc5; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,0x01000193);} return h>>>0; }
-
-function buildDemoReviews(productId: string): Review[] {
-  const h1 = hash32(productId);
-  const h2 = hash32b(productId);
-  if (h1 % 10 >= 7) return [];
-  const count = 2 + (h1 % 3);
-  return Array.from({ length: count }, (_, i) => ({
-    name:   NAMES[(h1 + i*31)  % NAMES.length],
-    text:   TEXTS[(h2 + i*53)  % TEXTS.length],
-    rating: RATINGS[(h1 + i*17) % RATINGS.length],
-    date:   DATES[(h2 + i*11)  % DATES.length],
-  }));
 }
 
 // ── Star components ────────────────────────────────────────────────────────────
@@ -91,11 +41,13 @@ function StarPicker({ value, onChange }: { value: number; onChange: (n: number) 
   const [hovered, setHovered] = useState(0);
   const active = hovered || value;
   return (
-    <div className="flex gap-1">
+    <div role="radiogroup" aria-labelledby="review-rating-label" className="flex gap-1">
       {[1,2,3,4,5].map((s) => (
         <button
           key={s}
           type="button"
+          role="radio"
+          aria-checked={s === value}
           onClick={() => onChange(s)}
           onMouseEnter={() => setHovered(s)}
           onMouseLeave={() => setHovered(0)}
@@ -138,18 +90,29 @@ function ReviewCard({ review, index, total }: { review: Review; index: number; t
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function ProductReviews({ productId, productName }: { productId: string; productName?: string }) {
-  const demo = buildDemoReviews(productId);
   const [realReviews, setRealReviews]   = useState<Review[]>([]);
   const [modalOpen, setModalOpen]       = useState(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [orderId,  setOrderId]   = useState("");
   const [name,     setName]      = useState("");
   const [rating,   setRating]    = useState(5);
   const [text,     setText]      = useState("");
+  const [consent,  setConsent]   = useState(false);
   const [loading,  setLoading]   = useState(false);
   const [error,    setError]     = useState("");
   const [success,  setSuccess]   = useState(false);
+
+  // Diálogo de reseña: foco inicial, trap de Tab, Escape, scroll lock y
+  // devolución del foco al botón "Escribir reseña".
+  useFocusTrap(modalOpen, modalRef, () => setModalOpen(false));
+
+  // Al enviar con éxito, lleva el foco al mensaje para que se anuncie.
+  useEffect(() => {
+    if (success) successRef.current?.focus({ preventScroll: true });
+  }, [success]);
 
   // Fetch real reviews
   useEffect(() => {
@@ -157,13 +120,13 @@ export default function ProductReviews({ productId, productName }: { productId: 
       .then((r) => r.json())
       .then((d) => {
         if (d.reviews?.length) {
-          setRealReviews(d.reviews.map((r: Review) => ({ ...r, verified: true })));
+          setRealReviews(d.reviews as Review[]);
         }
       })
       .catch(() => {});
   }, [productId]);
 
-  const allReviews = [...realReviews, ...demo];
+  const allReviews = realReviews;
   if (!allReviews.length) return null;
 
   const avg = allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length;
@@ -172,9 +135,9 @@ export default function ProductReviews({ productId, productName }: { productId: 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!orderId.trim()) { setError("Ingresa tu número de orden."); return; }
     if (!name.trim())    { setError("Ingresa tu nombre."); return; }
     if (!text.trim() || text.trim().length < 10) { setError("Tu reseña debe tener al menos 10 caracteres."); return; }
+    if (!consent) { setError("Acepta que tu nombre y tu reseña se publiquen para continuar."); return; }
 
     setLoading(true);
     try {
@@ -196,7 +159,7 @@ export default function ProductReviews({ productId, productName }: { productId: 
     }
   }
 
-  const inputCls = "w-full border border-zoa-line-strong bg-transparent px-3 py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15 placeholder:text-zoa-slate-60/60";
+  const inputCls = "w-full border border-zoa-line-strong bg-transparent px-3 py-3 font-sans text-[13px] text-zoa-slate transition-colors duration-200 focus:outline-none focus:border-zoa-slate focus:ring-2 focus:ring-zoa-slate/15 placeholder:text-zoa-slate-60";
 
   return (
     <>
@@ -240,6 +203,11 @@ export default function ProductReviews({ productId, productName }: { productId: 
             onClick={() => setModalOpen(false)}
           >
             <motion.div
+              ref={modalRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="review-modal-title"
+              tabIndex={-1}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
@@ -249,7 +217,7 @@ export default function ProductReviews({ productId, productName }: { productId: 
             >
               {/* Header */}
               <div className="flex items-center justify-between border-b border-zoa-line px-6 py-4">
-                <h3 className="font-display text-xl leading-none text-zoa-slate">Escribir reseña</h3>
+                <h3 id="review-modal-title" className="font-display text-xl leading-none text-zoa-slate">Escribir reseña</h3>
                 <button
                   onClick={() => setModalOpen(false)}
                   className="flex h-11 w-11 cursor-pointer items-center justify-center text-zoa-slate-60 transition-colors duration-200 hover:text-zoa-slate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
@@ -261,23 +229,33 @@ export default function ProductReviews({ productId, productName }: { productId: 
 
               <div className="px-6 py-5">
                 {success ? (
-                  <div className="py-6 text-center">
+                  <div
+                    ref={successRef}
+                    role="status"
+                    aria-live="polite"
+                    tabIndex={-1}
+                    className="py-6 text-center focus:outline-none"
+                  >
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-zoa-success">
                       <CheckCircle2 size={24} className="text-zoa-success" aria-hidden />
                     </div>
                     <p className="mb-1 font-sans text-base font-medium text-zoa-slate">¡Gracias por tu reseña!</p>
                     <p className="font-sans text-[13px] text-zoa-slate-60">
-                      Tu opinión ya está visible en el producto.
+                      Tu reseña quedó registrada y será revisada antes de publicarse.
                     </p>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Order ID — optional, for admin reference */}
                     <div>
-                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
+                      <label
+                        htmlFor="review-order-id"
+                        className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60"
+                      >
                         Número de orden <span className="normal-case tracking-normal">(opcional)</span>
                       </label>
                       <input
+                        id="review-order-id"
                         type="text"
                         value={orderId}
                         onChange={(e) => setOrderId(e.target.value)}
@@ -291,10 +269,14 @@ export default function ProductReviews({ productId, productName }: { productId: 
 
                     {/* Name */}
                     <div>
-                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
+                      <label
+                        htmlFor="review-name"
+                        className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60"
+                      >
                         Tu nombre *
                       </label>
                       <input
+                        id="review-name"
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -305,7 +287,10 @@ export default function ProductReviews({ productId, productName }: { productId: 
 
                     {/* Rating */}
                     <div>
-                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
+                      <label
+                        id="review-rating-label"
+                        className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60"
+                      >
                         Calificación *
                       </label>
                       <StarPicker value={rating} onChange={setRating} />
@@ -313,10 +298,14 @@ export default function ProductReviews({ productId, productName }: { productId: 
 
                     {/* Review text */}
                     <div>
-                      <label className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60">
+                      <label
+                        htmlFor="review-text"
+                        className="mb-1.5 block font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-zoa-slate-60"
+                      >
                         Tu reseña *
                       </label>
                       <textarea
+                        id="review-text"
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         placeholder="Cuéntanos tu experiencia con este producto…"
@@ -325,9 +314,32 @@ export default function ProductReviews({ productId, productName }: { productId: 
                       />
                     </div>
 
+                    {/* Consentimiento de publicación */}
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        id="review-consent"
+                        type="checkbox"
+                        checked={consent}
+                        onChange={(e) => setConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-zoa-forest"
+                      />
+                      <label
+                        htmlFor="review-consent"
+                        className="font-sans text-[11px] leading-relaxed text-zoa-slate-60"
+                      >
+                        Acepto que mi nombre y mi reseña se publiquen en el sitio —{" "}
+                        <Link
+                          href="/privacidad"
+                          className="underline underline-offset-2 transition-colors hover:text-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-forest"
+                        >
+                          Aviso de Privacidad
+                        </Link>
+                      </label>
+                    </div>
+
                     {/* Error */}
                     {error && (
-                      <p className="font-sans text-[12px] text-zoa-wine">{error}</p>
+                      <p role="alert" aria-live="polite" className="font-sans text-[12px] text-zoa-wine">{error}</p>
                     )}
 
                     {/* Submit */}
