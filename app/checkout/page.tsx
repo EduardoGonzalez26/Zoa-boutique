@@ -11,7 +11,7 @@ import { useCartStore } from "@/store/cartStore";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
 import { MP_PUBLIC_KEY } from "@/lib/mercadopagoPublicKey";
 import type { ShippingAddress } from "@/store/checkoutStore";
-import type { CartItem } from "@/lib/types";
+import type { CartItem, SaleConsent } from "@/lib/types";
 
 //
 // ── MercadoPago Bricks Initialization (runs once, client-only) ─────────────
@@ -43,6 +43,7 @@ export default function CheckoutPage() {
     items: cartItems,
     vipCode: cartVipCode,
     couponDiscount,
+    couponType,
     couponScope,
     discountAmount,
     isVip,
@@ -103,12 +104,18 @@ export default function CheckoutPage() {
     setProcessingError(null);
     try {
       setAddress(address);
+      // `SaleConsent` (lib/types) es la fuente de verdad del contrato legal.
+      const consent: SaleConsent = {
+        privacy: true,
+        terms: true,
+        acceptedAt: new Date().toISOString(),
+      };
       const res = await fetch("/api/process-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formData, items, address, total, vipCode: activeCode,
-          consent: { privacy: true, terms: true, acceptedAt: new Date().toISOString() },
+          consent,
         }),
       });
       const result = await res.json() as { status?: string; error?: string };
@@ -302,7 +309,11 @@ export default function CheckoutPage() {
                   </div>
                   {campaignDiscount > 0 && (
                     <div className="flex justify-between font-sans text-xs text-zoa-success">
-                      <span>Descuento ({couponDiscount}%)</span>
+                      <span>
+                        Descuento ({couponType === "fijo"
+                          ? new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(campaignDiscount)
+                          : `${couponDiscount}%`})
+                      </span>
                       <span className="tabular-nums">- {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 0 }).format(campaignDiscount)}</span>
                     </div>
                   )}

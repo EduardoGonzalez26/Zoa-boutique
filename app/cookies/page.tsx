@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Política de Cookies",
-  description: "Política de cookies y tecnologías similares de Zoa: carrito en almacenamiento local, cookies de MercadoPago al pagar y CDN de imágenes.",
+  description: "Política de cookies y tecnologías similares de Zoa: carrito en almacenamiento local, cookies de MercadoPago al pagar, CDN de imágenes y búsqueda de direcciones mediante un proxy interno.",
 };
 
 const legalLink = "font-medium text-zoa-slate underline decoration-zoa-slate decoration-2 underline-offset-2 transition-colors hover:text-zoa-forest hover:decoration-zoa-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate";
@@ -33,7 +33,7 @@ export default function CookiesPage() {
               <li><strong className="font-medium text-zoa-slate">Cookies de MercadoPago</strong> (terceros, necesarias al pagar): se activan únicamente al iniciar el pago, para procesar la transacción y prevenir fraudes. Su tratamiento se rige por la <a href="https://www.mercadopago.com.mx/privacidad" target="_blank" rel="noopener noreferrer" className={legalLink}>declaración de privacidad de MercadoPago</a>.</li>
               <li><strong className="font-medium text-zoa-slate">CDN de Cloudinary</strong>: las imágenes del sitio se entregan desde la red de distribución de Cloudinary; no se usa con fines publicitarios.</li>
               <li><strong className="font-medium text-zoa-slate">Enlaces a WhatsApp/Meta</strong>: los botones de contacto solo se activan si haces clic; a partir de ese momento aplican las políticas de esas plataformas.</li>
-              <li><strong className="font-medium text-zoa-slate">Búsqueda de direcciones (OpenStreetMap)</strong>: al escribir tu dirección en el checkout, tu navegador consulta el servicio Nominatim de OpenStreetMap para sugerir coincidencias; se usa solo para completar tu dirección de entrega.</li>
+              <li><strong className="font-medium text-zoa-slate">Búsqueda de direcciones (proxy interno)</strong>: al buscar tu dirección en el checkout, nuestro servidor consulta OpenStreetMap (Nominatim) en tu nombre para sugerir coincidencias. Tu navegador se comunica únicamente con zoa.mx y <strong className="font-medium text-zoa-slate">no compartimos tu dirección IP con OpenStreetMap</strong>; la consulta se usa solo para completar tu dirección de entrega.</li>
             </ul>
           </section>
 

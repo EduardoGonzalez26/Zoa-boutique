@@ -1,15 +1,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  POST /api/webhooks/payment-success
-//  Sends TWO transactional emails via Resend:
-//  1. Customer receipt — confirmation, items, shipping address + tracking
-//  2. Admin alert     — full order details + Skydropx label URL
+//
+//  Endpoint interno (header `x-internal-secret` = INTERNAL_WEBHOOK_SECRET).
+//  Envía DOS correos transaccionales vía Resend:
+//  1. Recibo de la clienta — confirmación, piezas, dirección y rastreo.
+//  2. Aviso interno — pedido completo + guía Skydropx.
+//
+//  Todo dato dinámico se escapa antes de interpolarse en el HTML.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { NextRequest, NextResponse } from "next/server";
 import { Resend, type CreateEmailResponse } from "resend";
-import type { CartItem } from "@/lib/types";
+import type { Brand, CartItem } from "@/lib/types";
 import type { ShippingAddress } from "@/store/checkoutStore";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "@/lib/shipping";
+import {
+  isInternalAuthorized,
+  unauthorizedResponse,
+} from "../../_lib/internal";
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -22,11 +30,46 @@ function getResend(): Resend {
 }
 
 const ADMIN_EMAILS = ["carmen@carmeli.mx", "carmeli6521@gmail.com", "jgegmz@gmail.com"];
-// Configurable para poder enviar desde un dominio verificado en Resend
-// (p. ej. mientras zoa.mx termina de verificarse).
+// Configurable para poder enviar desde un dominio verificado en Resend.
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "Zoa <hola@zoa.mx>";
 // Las respuestas de las clientas llegan a estos buzones.
 const REPLY_TO = ["carmen@carmeli.mx", "carmeli6521@gmail.com", "jgegmz@gmail.com"];
+
+// ── Seguridad / HTML ─────────────────────────────────────────────────────────
+
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+/** Escapa cualquier valor antes de interpolarlo en HTML o atributos. */
+function esc(value: unknown): string {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
+/** Sólo permite http(s) en hrefs dinámicos (guías de envío). */
+function safeHref(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return esc(url.toString());
+  } catch {
+    return null;
+  }
+}
+
+/** Evita inyección de headers (CR/LF) en asuntos de correo. */
+function sanitizeHeader(value: unknown, fallback = ""): string {
+  const clean = String(value ?? "")
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .slice(0, 180);
+  return clean || fallback;
+}
 
 // El SDK de Resend (v6) NO lanza en errores de API: resuelve { data, error },
 // por lo que allSettled marca los envíos como "fulfilled" aunque fallen.
@@ -65,7 +108,7 @@ function getOrderSummary(params: {
   couponCode?: string;
 }): OrderSummary {
   const subtotal = params.items.reduce(
-    (sum, ci) => sum + ci.product.price * ci.quantity,
+    (sum, ci) => sum + (Number(ci.product.price) || 0) * ci.quantity,
     0,
   );
   const normalizedCode = (params.vipCode ?? "").trim().toUpperCase();
@@ -139,10 +182,10 @@ function itemsTable(items: CartItem[]): string {
     .map(
       (ci) => `
       <tr>
-        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:14px;">${ci.product.name}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:13px;color:#6E655C;">Talla ${ci.size}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:13px;text-align:center;color:#6E655C;">×${ci.quantity}</td>
-        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:14px;text-align:right;">${fmt(ci.product.price * ci.quantity)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:14px;">${esc(ci.product.name)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:13px;color:#6E655C;">Talla ${esc(ci.size)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:13px;text-align:center;color:#6E655C;">×${esc(ci.quantity)}</td>
+        <td style="padding:10px 0;border-bottom:1px solid #EDE8E2;font-size:14px;text-align:right;">${fmt((Number(ci.product.price) || 0) * ci.quantity)}</td>
       </tr>`
     )
     .join("");
@@ -197,9 +240,12 @@ function buildCustomerEmail(params: {
     couponCode,
   });
 
+  const firstName = address.fullName.split(" ")[0] ?? "";
+  const orderLabel = esc(orderId ?? `#${paymentId}`);
+
   const discountRow = !isVip && discount > 0
     ? `<tr>
-        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${discountLabel}</td>
+        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${esc(discountLabel)}</td>
         <td style="text-align:right;font-size:13px;color:#1C1917;">- ${fmt(discount)}</td>
       </tr>`
     : "";
@@ -208,9 +254,9 @@ function buildCustomerEmail(params: {
     ? `<div style="background:#F0F7F0;padding:20px;margin-top:16px;border-left:3px solid #27ae60;">
       <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Tu envío está en camino 🚚</p>
       <p style="margin:0 0 12px;font-size:13px;color:#1C1917;">
-        ${carrier ?? "Paquetería"} · Número de rastreo: <strong>${trackingNumber}</strong>
+        ${esc(carrier ?? "Paquetería")} · Número de rastreo: <strong>${esc(trackingNumber)}</strong>
       </p>
-      <a href="${TRACKING_URL}" target="_blank"
+      <a href="${esc(TRACKING_URL)}" target="_blank"
         style="display:inline-block;background:#1C1917;color:#FAF8F5;padding:10px 22px;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;">
         Rastrear mi pedido →
       </a>
@@ -221,7 +267,7 @@ function buildCustomerEmail(params: {
 
   const content = `
     <h2 style="font-family:Georgia,serif;font-size:24px;font-weight:400;margin:0 0 8px;letter-spacing:0.05em;">
-      ¡Gracias por tu compra, ${address.fullName.split(" ")[0]}! 🎀
+      ¡Gracias por tu compra, ${esc(firstName)}! 🎀
     </h2>
     <p style="font-size:13px;color:#6E655C;margin:0 0 28px;line-height:1.6;">
       Recibimos tu pedido y lo estamos preparando con todo el cariño.
@@ -229,7 +275,7 @@ function buildCustomerEmail(params: {
 
     <div style="background:#FAF8F5;padding:16px 20px;border-left:3px solid #C9A96E;margin-bottom:28px;">
       <p style="margin:0;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Número de pedido</p>
-      <p style="margin:4px 0 0;font-size:16px;font-family:Georgia,serif;color:#1C1917;">${orderId ?? `#${paymentId}`}</p>
+      <p style="margin:4px 0 0;font-size:16px;font-family:Georgia,serif;color:#1C1917;">${orderLabel}</p>
     </div>
 
     ${itemsTable(items)}
@@ -257,10 +303,10 @@ function buildCustomerEmail(params: {
     <div style="background:#FAF8F5;padding:20px;margin-top:28px;">
       <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Dirección de envío</p>
       <p style="margin:0;font-size:13px;line-height:1.7;">
-        ${address.street}${address.numExterior ? ` #${address.numExterior}` : ""}${address.numInterior ? ` Int. ${address.numInterior}` : ""}<br/>
-        ${address.colonia ? `Col. ${address.colonia}<br/>` : ""}${address.city}<br/>
-        ${address.state} ${address.zip}<br/>
-        📱 ${address.phone}
+        ${esc(address.street)}${address.numExterior ? ` #${esc(address.numExterior)}` : ""}${address.numInterior ? ` Int. ${esc(address.numInterior)}` : ""}<br/>
+        ${address.colonia ? `Col. ${esc(address.colonia)}<br/>` : ""}${esc(address.city)}<br/>
+        ${esc(address.state)} ${esc(address.zip)}<br/>
+        📱 ${esc(address.phone)}
       </p>
     </div>
 
@@ -288,8 +334,24 @@ function buildAdminEmail(params: {
   labelUrl?: string | null;
   carrier?: string | null;
   skydropxError?: string | null;
+  saleLogError?: string | null;
 }): string {
-  const { address, items, total, paymentId, vipCode, discountAmount, couponCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError } = params;
+  const {
+    address,
+    items,
+    total,
+    paymentId,
+    vipCode,
+    discountAmount,
+    couponCode,
+    status,
+    orderId,
+    trackingNumber,
+    labelUrl,
+    carrier,
+    skydropxError,
+    saleLogError,
+  } = params;
   const { subtotal, shipping, discount, discountLabel, isVip } = getOrderSummary({
     items,
     total,
@@ -298,9 +360,12 @@ function buildAdminEmail(params: {
     couponCode,
   });
 
+  const orderLabel = esc(orderId ?? `#${paymentId}`);
+  const guideUrl = safeHref(labelUrl);
+
   const discountRow = !isVip && discount > 0
     ? `<tr>
-        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${discountLabel}</td>
+        <td style="font-size:13px;color:#1C1917;padding:4px 0;">${esc(discountLabel)}</td>
         <td style="text-align:right;font-size:13px;color:#1C1917;">- ${fmt(discount)}</td>
       </tr>`
     : "";
@@ -308,40 +373,48 @@ function buildAdminEmail(params: {
   const shipBlock = trackingNumber
     ? `<div style="background:#F0F7F0;padding:16px 20px;margin-top:20px;border-left:3px solid #27ae60;">
       <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Envío generado ✅</p>
-      <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#1C1917;">${carrier ?? ""} — Tracking: ${trackingNumber}</p>
-      <a href="${TRACKING_URL}" target="_blank"
+      <p style="margin:0 0 8px;font-size:14px;font-weight:bold;color:#1C1917;">${esc(carrier ?? "")} — Tracking: ${esc(trackingNumber)}</p>
+      <a href="${esc(TRACKING_URL)}" target="_blank"
         style="display:inline-block;background:#1C1917;color:#FAF8F5;padding:8px 18px;font-size:11px;letter-spacing:0.15em;text-transform:uppercase;text-decoration:none;margin-right:10px;">
         Rastrear envío →
       </a>
-      ${labelUrl ? `<a href="${labelUrl}" style="color:#C9A96E;font-size:12px;display:inline-block;margin-top:6px;">📋 Descargar guía de envío</a>` : ""}
+      ${guideUrl ? `<a href="${guideUrl}" style="color:#C9A96E;font-size:12px;display:inline-block;margin-top:6px;">📋 Descargar guía de envío</a>` : ""}
     </div>`
     : `<p style="font-size:12px;color:#A89F95;margin:20px 0 0;">
       ⚠️ Guía Skydropx no generada automáticamente — verificar manualmente.
-      ${skydropxError ? `<br/><span style="color:#e74c3c;font-size:11px;">Error: ${skydropxError}</span>` : ""}
+      ${skydropxError ? `<br/><span style="color:#e74c3c;font-size:11px;">Error: ${esc(skydropxError)}</span>` : ""}
     </p>`;
+
+  const saleLogBlock = saleLogError
+    ? `<p style="font-size:12px;color:#e74c3c;margin:12px 0 0;">
+        ⚠️ El stock se descontó, pero el log de venta no se confirmó: ${esc(saleLogError)}
+      </p>`
+    : `<p style="font-size:12px;color:#A89F95;margin:12px 0 0;">
+        ✅ Stock descontado automáticamente en Google Sheets.
+      </p>`;
 
   const content = `
     <h2 style="font-family:Georgia,serif;font-size:22px;font-weight:400;margin:0 0 6px;">
       🛍️ Nuevo pedido recibido
     </h2>
-    <p style="font-size:13px;color:#6E655C;margin:0 0 24px;">Pago: <strong style="color:#1C1917;">${status.toUpperCase()}</strong> · Pedido: <strong style="color:#1C1917;">${orderId ?? `#${paymentId}`}</strong>${vipCode ? ` · Código: ${vipCode}` : ""}</p>
+    <p style="font-size:13px;color:#6E655C;margin:0 0 24px;">Pago: <strong style="color:#1C1917;">${esc(status.toUpperCase())}</strong> · Pedido: <strong style="color:#1C1917;">${orderLabel}</strong>${vipCode ? ` · Código: ${esc(vipCode)}` : ""}</p>
 
     <div style="background:#FAF8F5;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Cliente</p>
       <p style="margin:0;font-size:14px;line-height:1.7;">
-        <strong>${address.fullName}</strong><br/>
-        📧 <a href="mailto:${address.email}" style="color:#C9A96E;">${address.email}</a><br/>
-        📱 <a href="tel:${address.phone}" style="color:#C9A96E;">${address.phone}</a>
+        <strong>${esc(address.fullName)}</strong><br/>
+        📧 <a href="mailto:${esc(address.email)}" style="color:#C9A96E;">${esc(address.email)}</a><br/>
+        📱 <a href="tel:${esc(address.phone)}" style="color:#C9A96E;">${esc(address.phone)}</a>
       </p>
     </div>
 
     <div style="background:#FAF8F5;padding:16px 20px;margin-bottom:24px;">
       <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#A89F95;">Dirección</p>
       <p style="margin:0;font-size:14px;line-height:1.7;">
-        ${address.street}${address.numExterior ? ` #${address.numExterior}` : ""}<br/>
-        ${address.numInterior ? `Int. ${address.numInterior}<br/>` : ""}
-        ${address.colonia ? `Col. ${address.colonia}<br/>` : ""}
-        ${address.city}, ${address.state} ${address.zip}
+        ${esc(address.street)}${address.numExterior ? ` #${esc(address.numExterior)}` : ""}<br/>
+        ${address.numInterior ? `Int. ${esc(address.numInterior)}<br/>` : ""}
+        ${address.colonia ? `Col. ${esc(address.colonia)}<br/>` : ""}
+        ${esc(address.city)}, ${esc(address.state)} ${esc(address.zip)}
       </p>
     </div>
 
@@ -368,15 +441,17 @@ function buildAdminEmail(params: {
 
     ${shipBlock}
 
-    <p style="font-size:12px;color:#A89F95;margin:12px 0 0;">
-      ✅ Stock descontado automáticamente en Google Sheets.
-    </p>`;
+    ${saleLogBlock}`;
 
   return baseWrapper(content);
 }
 
 // ── Route Handler ─────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  if (!isInternalAuthorized(req, "INTERNAL_WEBHOOK_SECRET")) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await req.json() as {
       paymentId:       string | number;
@@ -388,34 +463,79 @@ export async function POST(req: NextRequest) {
       discountAmount?: number;
       couponCode?:     string;
       orderId?:        string;
+      brand?:          Brand;
       trackingNumber?: string | null;
       labelUrl?:       string | null;
       carrier?:        string | null;
       skydropxError?:  string | null;
+      saleLogError?:   string | null;
     };
 
-    const { paymentId, status, items, address, total, vipCode = "", discountAmount, couponCode, orderId,
-            trackingNumber, labelUrl, carrier, skydropxError } = body;
+    const {
+      paymentId, status, items, address, total, vipCode = "",
+      discountAmount, couponCode, orderId, trackingNumber, labelUrl,
+      carrier, skydropxError, saleLogError,
+    } = body;
 
     if (!address?.email || !items?.length) {
       return NextResponse.json({ error: "Missing data" }, { status: 400 });
     }
 
+    const safeAddress: ShippingAddress = {
+      ...address,
+      fullName:    sanitizeHeader(address.fullName),
+      email:       sanitizeHeader(address.email),
+      phone:       sanitizeHeader(address.phone),
+      street:      sanitizeHeader(address.street),
+      numExterior: sanitizeHeader(address.numExterior),
+      numInterior: sanitizeHeader(address.numInterior),
+      colonia:     sanitizeHeader(address.colonia),
+      city:        sanitizeHeader(address.city),
+      state:       sanitizeHeader(address.state),
+      zip:         sanitizeHeader(address.zip),
+    };
+
     // ── Send both emails concurrently ─────────────────────────────────────
     const [customerResult, adminResult] = await Promise.allSettled([
       getResend().emails.send({
         from: FROM_EMAIL,
-        to: [address.email],
+        to: [safeAddress.email],
         replyTo: REPLY_TO,
-        subject: `🎀 Confirmación de compra Zoa · #${paymentId}`,
-        html: buildCustomerEmail({ address, items, total, paymentId, vipCode, discountAmount, couponCode, orderId, trackingNumber, carrier }),
+        subject: `🎀 Confirmación de compra Zoa · #${sanitizeHeader(paymentId)}`,
+        html: buildCustomerEmail({
+          address: safeAddress,
+          items,
+          total,
+          paymentId,
+          vipCode,
+          discountAmount,
+          couponCode,
+          orderId,
+          trackingNumber,
+          carrier,
+        }),
       }),
       getResend().emails.send({
         from: FROM_EMAIL,
         to: ADMIN_EMAILS,
-        replyTo: address.email,
-        subject: `🛍️ Nuevo pedido · ${address.fullName} · ${fmt(total)} · ${orderId ?? `#${paymentId}`}`,
-        html: buildAdminEmail({ address, items, total, paymentId, vipCode, discountAmount, couponCode, status, orderId, trackingNumber, labelUrl, carrier, skydropxError }),
+        replyTo: safeAddress.email,
+        subject: `🛍️ Nuevo pedido · ${sanitizeHeader(safeAddress.fullName)} · ${fmt(total)} · ${sanitizeHeader(orderId ?? `#${paymentId}`)}`,
+        html: buildAdminEmail({
+          address: safeAddress,
+          items,
+          total,
+          paymentId,
+          vipCode,
+          discountAmount,
+          couponCode,
+          status,
+          orderId,
+          trackingNumber,
+          labelUrl,
+          carrier,
+          skydropxError,
+          saleLogError,
+        }),
       }),
     ]);
 

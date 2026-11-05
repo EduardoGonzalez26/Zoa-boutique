@@ -1,11 +1,20 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  Zoa — Google Sheets Reader (Public Sheet — no auth needed)
+//  Zoa — Google Sheets Reader (CSV público — sin auth)
 //
-//  Reads from the public Google Sheets JSON export endpoint.
-//  The sheet must be shared as "Anyone with the link can view".
+//  Dos modos de lectura del catálogo:
+//  1. GOOGLE_SHEET_PUBLIC_CSV_URL definida → se lee esa URL publicada
+//     ("Publicar en la web"). El archivo maestro puede seguir privado.
+//  2. Sin esa env → fallback local al export CSV por GOOGLE_SHEET_ID
+//     (requiere que la hoja sea visible con el enlace).
+//
+//  Best sellers:
+//  - GOOGLE_SHEET_PUBLIC_BESTSELLERS_CSV_URL definida → se lee esa pestaña
+//    pública sin PII (solo Producto/Nombre y Unidades/Cantidad).
+//  - Sin ella se conserva el comportamiento histórico (gviz de "Ventas").
 //
 //  For WRITING (stock deduction after payment), we use a Google Apps Script
 //  web app deployed from the same sheet (see APPS_SCRIPT_URL env var).
+//  Apps Script escribe en el archivo privado; no requiere hoja pública.
 //
 //  Pestaña: "Oficial" — Columns A–T:
 //  A:NUM  B:SKU  C:NOMBRE  D:DESCRIPCIÓN  E:MARCA
@@ -14,7 +23,7 @@
 //  Q:DE FRENTE  R:CLOSE UP  S:DE LADO  T:DE ESPALDAS
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { BestSeller, CartItem, Product } from "./types";
+import type { BestSeller, Brand, CartItem, Product, SaleConsent } from "./types";
 
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME ?? "Oficial";
 const VENTAS_SHEET_NAME = process.env.GOOGLE_SHEET_VENTAS ?? "Ventas";
@@ -73,25 +82,46 @@ function parseCSV(text: string): string[][] {
 }
 
 /**
- * Fetches all rows from the "Oficial" sheet via CSV export.
- * CSV has NO column-type inference — every value is returned as a plain string.
- * This is more robust than the gviz/tq endpoint, which silently converts
- * mixed-type values (e.g. "106A" in a mostly-numeric column) to null.
+ * Descarga y parsea una URL CSV. CSV no infiere tipos: todo llega como string,
+ * lo que evita que gviz convierta valores mixtos (p. ej. "106A") a null.
  */
-async function fetchSheetRows(): Promise<string[][]> {
-  // CSV export — no auth required if sheet is public
-  const url = `https://docs.google.com/spreadsheets/d/${getSpreadsheetId()}/export?format=csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
-
-  const res = await fetch(url, {
-    next: { revalidate: 60 }, // ISR: refetch every 60 s
-  });
+async function fetchCsvRows(
+  url: string,
+  fresh: boolean,
+  revalidateSeconds: number,
+  label: string,
+): Promise<string[][]> {
+  const res = await fetch(
+    url,
+    fresh
+      ? { cache: "no-store" }
+      : { next: { revalidate: revalidateSeconds } },
+  );
 
   if (!res.ok) {
-    throw new Error(`Google Sheets CSV fetch failed: ${res.status} ${res.statusText}`);
+    throw new Error(`${label} CSV fetch failed: ${res.status} ${res.statusText}`);
   }
 
   const text = await res.text();
-  const rows = parseCSV(text);
+  return parseCSV(text.replace(/^\uFEFF/, ""));
+}
+
+/**
+ * Fetches all rows from the "Oficial" sheet via CSV.
+ *
+ * Prioridad:
+ * 1. `GOOGLE_SHEET_PUBLIC_CSV_URL` (URL publicada de la pestaña Oficial).
+ * 2. Fallback: export CSV por `GOOGLE_SHEET_ID` (hoja compartida por enlace).
+ *
+ * La primera fila siempre es el encabezado y se descarta.
+ */
+async function fetchSheetRows(fresh = false): Promise<string[][]> {
+  const publicCsvUrl = process.env.GOOGLE_SHEET_PUBLIC_CSV_URL?.trim();
+  const url =
+    publicCsvUrl ||
+    `https://docs.google.com/spreadsheets/d/${getSpreadsheetId()}/export?format=csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+  const rows = await fetchCsvRows(url, fresh, 60, "Google Sheets Oficial");
 
   // First row is the header — skip it
   return rows.slice(1);
@@ -161,8 +191,10 @@ function rowToProduct(row: string[]): Product {
  * Products with zero stock in ALL sizes are included (shown as "Agotado").
  * Products without a name or category are excluded.
  */
-export async function getProducts(): Promise<Product[]> {
-  const rows = await fetchSheetRows();
+export async function getProducts(
+  options: { fresh?: boolean } = {},
+): Promise<Product[]> {
+  const rows = await fetchSheetRows(options.fresh === true);
 
   return rows
     .filter((row) => {
@@ -274,19 +306,22 @@ export async function getProductById(id: string): Promise<Product | null> {
  * missing/renamed the fallback returns the "Oficial" header — we detect that
  * and return [] so the UI keeps its static fallback.
  */
-async function fetchVentasRows(): Promise<string[][]> {
+async function fetchVentasRows(fresh = false): Promise<string[][]> {
   const id = getSpreadsheetId();
   const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(VENTAS_SHEET_NAME)}`;
 
-  const res = await fetch(url, {
-    next: { revalidate: 300 }, // las ventas cambian con poca frecuencia
-  });
+  const res = await fetch(
+    url,
+    fresh
+      ? { cache: "no-store" }
+      : { next: { revalidate: 300 } }, // las ventas cambian con poca frecuencia
+  );
 
   if (!res.ok) {
     throw new Error(`Google Sheets ventas fetch failed: ${res.status} ${res.statusText}`);
   }
 
-  const rows = parseCSV(await res.text());
+  const rows = parseCSV((await res.text()).replace(/^\uFEFF/, ""));
   const header = (rows[0] ?? []).join(" ").toLowerCase();
   const isVentas = header.includes("productos") && header.includes("fecha");
   return isVentas ? rows.slice(1) : [];
@@ -302,6 +337,96 @@ function normalizeName(name: string): string {
     .replace(/\s+/g, " ");
 }
 
+/** Estados que NO deben contar para best sellers (pedidos sin surtir/cancelados). */
+const NON_COUNTABLE_STATUSES = new Set([
+  "pending_fulfillment",
+  "processing",
+  "cancelled",
+  "canceled",
+  "rejected",
+  "failed",
+]);
+
+/** Estados finales conocidos del log de ventas. */
+const SALE_STATUSES = [
+  "approved",
+  "sold_physical",
+  "pending_fulfillment",
+  "processing",
+  "pending",
+  "rejected",
+  "cancelled",
+  "canceled",
+  "failed",
+] as const;
+
+export type SaleLogStatus = (typeof SALE_STATUSES)[number] | "unknown";
+
+/**
+ * Zoa y Carmeli comparten la pestaña "Ventas". Sólo contamos pedidos de Zoa:
+ * los generados por process-payment (`ZOA-…`) y por la tienda física
+ * (`ZOA-TIENDA-…`). Si no hay filas nuevas con esos prefijos se conserva el
+ * comportamiento anterior (contar toda la hoja) como fallback.
+ */
+function isZoaSaleRow(row: string[]): boolean {
+  return row.some((cell) => {
+    const value = cell.trim().toUpperCase();
+    return (
+      value.startsWith("ZOA-") ||
+      value.startsWith("ZOA-TIENDA-") ||
+      /(^|\s)ZOA-(TIENDA-)?\d/.test(value)
+    );
+  });
+}
+
+function isCountableSaleRow(row: string[]): boolean {
+  return !row.some((cell) =>
+    NON_COUNTABLE_STATUSES.has(cell.trim().toLowerCase()),
+  );
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Busca el estado de un pedido en el log de ventas (lectura fresca, sin caché).
+ *
+ * Se usa como marca de idempotencia del webhook de MercadoPago: si el pedido
+ * ya tiene una fila con estado final, el evento no se vuelve a procesar.
+ * Devuelve `null` si no hay ninguna fila con ese orderId.
+ */
+export async function findSaleStatusByOrderId(
+  orderId: string,
+): Promise<SaleLogStatus | null> {
+  const rows = await fetchVentasRows(true);
+  const matcher = new RegExp(
+    `(^|[^A-Za-z0-9-])${escapeRegExp(orderId)}([^0-9]|$)`,
+  );
+
+  let fallback: SaleLogStatus | null = null;
+
+  for (const row of rows) {
+    const matches = row.some((cell) => matcher.test(cell.trim()));
+    if (!matches) continue;
+
+    const normalized = row.map((cell) => cell.trim().toLowerCase());
+    const found = SALE_STATUSES.find((status) =>
+      normalized.some((cell) => cell === status),
+    );
+
+    if (found === "pending_fulfillment" || found === "processing") {
+      // Hay una fila, pero el pedido aún no terminó: permite reintentar.
+      fallback = found;
+      continue;
+    }
+    if (found) return found;
+    fallback = "unknown";
+  }
+
+  return fallback;
+}
+
 /**
  * Aggregates units sold per product name from the "Ventas" log.
  * Items are stored as "Nombre (TALLA) xCant $precio" joined by " | ".
@@ -310,6 +435,7 @@ function countSoldUnits(rows: string[][]): Map<string, number> {
   const units = new Map<string, number>();
 
   for (const row of rows) {
+    if (!isCountableSaleRow(row)) continue;
     for (const cell of row) {
       if (!cell || !cell.includes("(")) continue;
       for (const part of cell.split("|")) {
@@ -326,17 +452,89 @@ function countSoldUnits(rows: string[][]): Map<string, number> {
   return units;
 }
 
-/**
- * Returns the best-selling products (most units sold) matched against the
- * current catalog, ready for the navbar mega menú carousel.
- * Products no longer in the catalog (or without a photo) are skipped.
- */
-export async function getBestSellers(limit = 4): Promise<BestSeller[]> {
-  const [saleRows, catalog] = await Promise.all([fetchVentasRows(), getGroupedProducts()]);
-  if (saleRows.length === 0) return [];
+/** Encabezado comparable: minúsculas, sin acentos, sin espacios extra. */
+function normalizeHeader(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
 
+function findHeaderIndex(
+  headers: string[],
+  aliases: string[],
+  tokens: string[],
+): number {
+  for (const alias of aliases) {
+    const index = headers.indexOf(alias);
+    if (index !== -1) return index;
+  }
+  return headers.findIndex((header) =>
+    tokens.some((token) => header.includes(token)),
+  );
+}
+
+/**
+ * Lee la pestaña pública "BestSellers" (sin PII) publicada con
+ * "Publicar en la web". Acepta encabezados flexibles:
+ *   - Producto | Nombre
+ *   - Unidades | Cantidad
+ *
+ * Cualquier otra columna se ignora. Devuelve unidades agregadas por nombre.
+ */
+async function fetchPublicBestSellerRows(
+  url: string,
+  fresh = false,
+): Promise<Map<string, number>> {
+  const rows = await fetchCsvRows(url, fresh, 300, "Google Sheets BestSellers");
+  if (rows.length === 0) return new Map();
+
+  const headers = (rows[0] ?? []).map(normalizeHeader);
+  const productIndex = findHeaderIndex(
+    headers,
+    ["producto", "nombre", "productos", "nombres"],
+    ["producto", "nombre"],
+  );
+  const unitsIndex = findHeaderIndex(
+    headers,
+    ["unidades", "cantidad", "unidades vendidas", "cantidad vendida"],
+    ["unidad", "cantidad"],
+  );
+
+  if (productIndex === -1 || unitsIndex === -1) {
+    console.warn(
+      "[googleSheets] BestSellers CSV sin columnas Producto/Nombre y Unidades/Cantidad.",
+    );
+    return new Map();
+  }
+
+  const unitsByName = new Map<string, number>();
+  for (const row of rows.slice(1)) {
+    const name = String(row[productIndex] ?? "").trim();
+    // `toFloat` tolera separadores de miles y símbolos ($) del CSV publicado.
+    const units = Math.trunc(toFloat(row[unitsIndex]));
+    if (!name || units <= 0) continue;
+
+    const key = normalizeName(name);
+    unitsByName.set(key, (unitsByName.get(key) ?? 0) + units);
+  }
+
+  return unitsByName;
+}
+
+/**
+ * Cruza las unidades vendidas con el catálogo actual y devuelve los productos
+ * con foto. Los productos que ya no existen (o no tienen imagen) se omiten.
+ */
+function rankBestSellers(
+  unitsByName: Map<string, number>,
+  catalog: Product[],
+  limit: number,
+): BestSeller[] {
   const byName = new Map(catalog.map((p) => [normalizeName(p.name), p]));
-  const ranked = [...countSoldUnits(saleRows).entries()].sort((a, b) => b[1] - a[1]);
+  const ranked = [...unitsByName.entries()].sort((a, b) => b[1] - a[1]);
 
   const best: BestSeller[] = [];
   for (const [name] of ranked) {
@@ -352,40 +550,144 @@ export async function getBestSellers(limit = 4): Promise<BestSeller[]> {
   return best;
 }
 
+/**
+ * Returns the best-selling products (most units sold) matched against the
+ * current catalog, ready for the navbar mega menú carousel.
+ *
+ * - Con `GOOGLE_SHEET_PUBLIC_BESTSELLERS_CSV_URL`: lee esa pestaña pública.
+ * - Sin ella: conserva el ranking histórico desde "Ventas" (gviz).
+ *
+ * Nunca lanza: si la hoja de ventas deja de ser pública (o el catálogo falla)
+ * devuelve `[]` para que el layout use su fallback estático.
+ */
+export async function getBestSellers(limit = 4): Promise<BestSeller[]> {
+  try {
+    const publicBestsellersUrl =
+      process.env.GOOGLE_SHEET_PUBLIC_BESTSELLERS_CSV_URL?.trim();
+
+    if (publicBestsellersUrl) {
+      const [unitsByName, catalog] = await Promise.all([
+        fetchPublicBestSellerRows(publicBestsellersUrl),
+        getGroupedProducts(),
+      ]);
+      return rankBestSellers(unitsByName, catalog, limit);
+    }
+
+    const [saleRows, catalog] = await Promise.all([
+      fetchVentasRows(),
+      getGroupedProducts(),
+    ]);
+    if (saleRows.length === 0) return [];
+
+    // La hoja es compartida con Carmeli: prioriza pedidos Zoa; si aún no hay
+    // filas con ese prefijo (datos legacy), usa la hoja completa como fallback.
+    const zoaRows = saleRows.filter(isZoaSaleRow);
+    const countedRows = zoaRows.length > 0 ? zoaRows : saleRows;
+
+    return rankBestSellers(countSoldUnits(countedRows), catalog, limit);
+  } catch (error) {
+    console.warn(
+      "[googleSheets] Best sellers no disponibles; se usa el fallback estático:",
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
+
+
+// ── Write (Apps Script) ──────────────────────────────────────────────────────
+
+const APPS_SCRIPT_TIMEOUT_MS = 15_000;
+
+/**
+ * POST al Apps Script. Lanza si la respuesta es non-ok o si el script devuelve
+ * `{ ok: false }` / `{ success: false }` con HTTP 200 (fallo silencioso).
+ *
+ * No se registra la URL ni el cuerpo completo en los logs: puede contener
+ * datos del pedido. El mensaje se trunca a 300 caracteres.
+ */
+async function postAppsScript(body: unknown, action: string): Promise<void> {
+  const appsScriptUrl = process.env.APPS_SCRIPT_URL;
+
+  if (!appsScriptUrl) {
+    throw new Error(
+      "APPS_SCRIPT_URL no está configurada. Agrégala en las variables de entorno de Railway.",
+    );
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(appsScriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      redirect: "follow",
+      signal: AbortSignal.timeout(APPS_SCRIPT_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new Error(`Apps Script ${action}: no se pudo conectar (${reason})`);
+  }
+
+  const text = await res.text().catch(() => "");
+
+  if (!res.ok) {
+    throw new Error(
+      `Apps Script ${action} failed: HTTP ${res.status} — ${text.slice(0, 300)}`,
+    );
+  }
+
+  if (text.trim()) {
+    try {
+      const data = JSON.parse(text) as { ok?: boolean; success?: boolean };
+      if (data?.ok === false || data?.success === false) {
+        throw new Error(
+          `Apps Script ${action} rechazó la operación — ${text.slice(0, 300)}`,
+        );
+      }
+    } catch (error) {
+      // Sólo relanzamos si el error lo generamos nosotros; si el body no es
+      // JSON (p. ej. "ok"), la respuesta HTTP 200 es suficiente.
+      if (error instanceof Error && error.message.startsWith("Apps Script")) {
+        throw error;
+      }
+    }
+  }
+}
 
 // ── Write (Stock Deduction) ──────────────────────────────────────────────────
 
 /**
- * Deducts stock via a Google Apps Script web app.
- * The Apps Script must be deployed from the same spreadsheet.
+ * Descuenta stock vía Google Apps Script.
  *
- * If APPS_SCRIPT_URL is not set, this is a no-op (for development).
+ * `orderId` y `brand` viajan en el payload para que el script pueda:
+ *  - deduplicar reintentos del webhook (orderId),
+ *  - separar ventas Zoa de Carmeli (brand).
  *
- * Expected payload to the Apps Script:
- *   POST { items: [{ id: "SKU", size: "M", quantity: 1 }] }
+ * El Apps Script debe ignorar duplicados del mismo `orderId`: es la única
+ * barrera atómica ante reintentos concurrentes entre instancias.
  */
-export async function deductStock(items: CartItem[]): Promise<void> {
-  const appsScriptUrl = process.env.APPS_SCRIPT_URL;
-
-  if (!appsScriptUrl) {
-    throw new Error("APPS_SCRIPT_URL no está configurada. Agrega la variable en Vercel → Settings → Environment Variables.");
-  }
-
+export async function deductStock(
+  items: CartItem[],
+  orderId: string,
+  brand: Brand,
+): Promise<void> {
   const payload = items.map((item) => ({
     id: item.product.id,
     size: item.size,
     quantity: item.quantity,
   }));
 
-  const res = await fetch(appsScriptUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items: payload }),
-  });
-
-  if (!res.ok) {
-    console.error("[Zoa] Stock deduction failed:", res.status, await res.text());
-  }
+  // Se conserva la forma histórica (items en la raíz, sin `action`) para no
+  // romper el Apps Script desplegado; orderId/brand son campos adicionales.
+  await postAppsScript(
+    {
+      items: payload,
+      orderId,
+      brand,
+    },
+    "deductStock",
+  );
 }
 
 // ── Write (Sale Log) ─────────────────────────────────────────────────────────
@@ -402,27 +704,37 @@ export interface SaleRecord {
   paymentMethod: string;
   status: string;
   vipCode?: string;
+  brand: Brand;
+  consent?: SaleConsent;
 }
 
 /**
  * Logs a sale to the "Ventas" sheet tab via Google Apps Script.
  * The Apps Script appends a new row with all order details.
- * Non-fatal: if APPS_SCRIPT_URL is not set, this is a no-op.
+ *
+ * El layout actual de "Ventas" no tiene columna de consentimiento. Para que
+ * quede persistido aun sin cambiar el Apps Script, se anexa al campo Dirección
+ * (columna F) en formato legible. El objeto `sale` también lleva `consent`
+ * para una futura columna dedicada.
+ *
+ * Lanza si el script no confirma la escritura. Los callers deben decidir si
+ * el pedido queda `pending_fulfillment` (nunca fingir éxito silencioso).
  */
 export async function logSale(sale: SaleRecord): Promise<void> {
-  const appsScriptUrl = process.env.APPS_SCRIPT_URL;
-  if (!appsScriptUrl) {
-    console.warn("[Zoa] APPS_SCRIPT_URL not set — sale log skipped");
-    return;
-  }
+  const salePayload = sale.consent
+    ? {
+        ...sale,
+        address: `${sale.address} | Consentimiento: privacy=${sale.consent.privacy}; terms=${sale.consent.terms}; acceptedAt=${sale.consent.acceptedAt}`,
+      }
+    : sale;
 
-  const res = await fetch(appsScriptUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "logSale", sale }),
-  });
-
-  if (!res.ok) {
-    console.error("[Zoa] Sale log failed:", res.status, await res.text());
-  }
+  await postAppsScript(
+    {
+      action: "logSale",
+      orderId: sale.orderId,
+      brand: sale.brand,
+      sale: salePayload,
+    },
+    "logSale",
+  );
 }

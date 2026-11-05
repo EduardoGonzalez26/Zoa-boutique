@@ -5,6 +5,16 @@
 // Tallas disponibles — incluye LOV (Love Size) de las marcas del sheet
 export type Size = "XS" | "S" | "M" | "L" | "LOV" | "XL";
 
+/** Marca dueña de la operación. Zoa y Carmeli comparten sheet/Apps Script. */
+export type Brand = "ZOA";
+
+/** Consentimiento legal aceptado en el checkout (se persiste en el log de venta). */
+export interface SaleConsent {
+  privacy: boolean;
+  terms: boolean;
+  acceptedAt: string;
+}
+
 export interface ProductVariant {
   id: string;
   color: string;

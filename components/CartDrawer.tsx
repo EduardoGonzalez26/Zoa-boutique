@@ -1,14 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, CreditCard, CheckCircle2, Check, MapPin, Package, Loader2 } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, Tag, ArrowLeft, Mail, Phone, CreditCard, Check, MapPin, Package, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useCartStore } from "@/store/cartStore";
-import type { CartItem } from "@/lib/types";
+import type { CartItem, SaleConsent } from "@/lib/types";
 import { FREE_SHIPPING_CODE, FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import AddressAutocomplete from '@/components/AddressAutocomplete';
 import Overline from "@/components/ui/Overline";
@@ -87,17 +87,25 @@ export default function CartDrawer() {
       });
       const data = await res.json() as { ok: boolean; type?: string; discount?: number; error?: string; code?: string; scope?: string };
       if (data.ok) {
+        // Los cupones internos (VENDIDO) no aplican a la tienda en línea: la
+        // venta física se registra desde /admin/ventas.
+        if (data.type === "interno") {
+          setCouponStatus("error");
+          setCouponMsg("El cupón VENDIDO es de uso interno y no aplica en la tienda en línea.");
+          setCouponDiscount(0, "", "all");
+          return;
+        }
         setVipCode(code);
         setCouponDiscount(
           data.discount ?? 0,
           data.type ?? "",
           data.scope === "eligible" ? "eligible" : "all",
         );
-        if (data.type === "interno") {
-          setCouponMsg("Cupón VENDIDO activo — venta física");
-        } else {
-          setCouponMsg(`Cupón aplicado — ${data.discount}% de descuento`);
-        }
+        setCouponMsg(
+          data.type === "fijo"
+            ? "Cupón aplicado — descuento fijo"
+            : `Cupón aplicado — ${data.discount}% de descuento`,
+        );
         setCouponStatus("ok");
       } else {
         setCouponStatus("error");
@@ -122,37 +130,19 @@ export default function CartDrawer() {
   const subtotalVal = subtotal();
   const shippingVal = shipping();
   const discountVal = discountAmount ? discountAmount() : 0;
-  const isVendido   = vipCode === 'VENDIDO' && couponType === 'interno';
   const finalTotal  = vipActive ? 300 : total();
   const hasDiscountedItems = items.some((item) => (item.product.discount ?? 0) > 0);
 
-  // ── VENDIDO: direct stock deduction, no payment/shipping ──────────────
-  const [vendidoLoading, setVendidoLoading] = useState(false);
-  const [vendidoSuccess, setVendidoSuccess] = useState(false);
-
-  const handleVendido = async () => {
-    setVendidoLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/vendido", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Error al registrar venta");
-      setVendidoSuccess(true);
-      clearCart();
-      setTimeout(() => {
-        setVendidoSuccess(false);
-        handleClose();
-      }, 2500);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al registrar venta");
-    } finally {
-      setVendidoLoading(false);
-    }
-  };
+  // Un cupón interno pudo quedar persistido en el carrito antes de retirar la
+  // venta física del flujo público. Se descarta al hidratar el store.
+  useEffect(() => {
+    if (couponType !== "interno") return;
+    setVipCode("");
+    setCouponDiscount(0, "", "all");
+    setPromoCode("");
+    setCouponMsg("El cupón VENDIDO es de uso interno y no aplica en la tienda en línea.");
+    setCouponStatus("error");
+  }, [couponType, setVipCode, setCouponDiscount]);
 
   const validateForm = (): boolean => {
     if (!shippingData.name.trim()) { setFormError("Por favor ingresa tu nombre."); return false; }
@@ -349,7 +339,12 @@ export default function CartDrawer() {
                         <div className="flex items-center justify-between border border-zoa-success px-3 py-2">
                           <span className="inline-flex items-center gap-2 font-sans text-[11px] font-medium text-zoa-success">
                             <Check size={12} aria-hidden />
-                            {vipCode}{couponType === "envio-gratis" ? " — envío gratis" : couponType === "interno" ? " — venta física" : couponDiscount > 0 ? ` — ${couponDiscount}% off` : ""}
+                            {vipCode}
+                            {couponType === "envio-gratis"
+                              ? " — envío gratis"
+                              : couponType === "fijo"
+                                ? discountVal > 0 ? ` — ${fmt(discountVal)} off` : ""
+                                : couponDiscount > 0 ? ` — ${couponDiscount}% off` : ""}
                           </span>
                           <button onClick={handleRemoveCoupon}
                             className="ml-3 cursor-pointer text-zoa-success transition-colors hover:text-zoa-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-wine"
@@ -399,7 +394,7 @@ export default function CartDrawer() {
                       </div>
                       {discountVal > 0 && (
                         <div className="flex justify-between font-sans text-xs text-zoa-success">
-                          <span>Descuento ({couponDiscount}%)</span>
+                          <span>Descuento ({couponType === "fijo" ? fmt(discountVal) : `${couponDiscount}%`})</span>
                           <span className="tabular">- {fmt(discountVal)}</span>
                         </div>
                       )}
@@ -415,45 +410,21 @@ export default function CartDrawer() {
                       </div>
                     </div>
 
-                    {/* VENDIDO: venta física */}
-                    {isVendido ? (
-                      <>
-                        {vendidoSuccess ? (
-                          <div role="status" aria-live="polite" className="inline-flex w-full items-center justify-center gap-2 border border-zoa-success py-3.5 text-center font-sans text-sm tracking-wide text-zoa-success">
-                            <CheckCircle2 size={16} aria-hidden /> Venta registrada — inventario descontado
-                          </div>
-                        ) : (
-                          <motion.button
-                            onClick={handleVendido}
-                            disabled={vendidoLoading}
-                            whileTap={{ scale: 0.99 }}
-                            className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
-                            {vendidoLoading ? "Registrando…" : "Confirmar venta física"}
-                          </motion.button>
-                        )}
-                        <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
-                          Solo descuenta inventario · Sin cobro
-                        </p>
-                      </>
-                    ) : (
-                      /* Checkout normal */
-                      <>
-                        <motion.button
-                          onClick={() => setDrawerView("checkout")}
-                          whileTap={{ scale: 0.99 }}
-                          className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
-                          Finalizar compra
-                        </motion.button>
-                        <button
-                          onClick={handleClose}
-                          className="flex h-12 w-full cursor-pointer items-center justify-center border border-zoa-line-strong font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
-                          Seguir comprando
-                        </button>
-                        <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
-                          Pago seguro con Mercado Pago
-                        </p>
-                      </>
-                    )}
+                    {/* Checkout normal */}
+                    <motion.button
+                      onClick={() => setDrawerView("checkout")}
+                      whileTap={{ scale: 0.99 }}
+                      className="flex h-14 w-full cursor-pointer items-center justify-center bg-zoa-forest font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-zoa-surface transition-colors duration-200 hover:bg-zoa-forest-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                      Finalizar compra
+                    </motion.button>
+                    <button
+                      onClick={handleClose}
+                      className="flex h-12 w-full cursor-pointer items-center justify-center border border-zoa-line-strong font-sans text-[10px] uppercase tracking-[0.18em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate focus-visible:ring-offset-2 focus-visible:ring-offset-transparent active:translate-y-px">
+                      Seguir comprando
+                    </button>
+                    <p className="text-center font-sans text-[10px] tracking-wide text-zoa-slate-60">
+                      Pago seguro con Mercado Pago
+                    </p>
                     {error && <p role="alert" aria-live="polite" className="text-center font-sans text-xs text-zoa-wine">{error}</p>}
                   </div>
                 )}
@@ -510,6 +481,12 @@ export default function CartDrawer() {
                           setPaying(true);
                           setError(null);
                           try {
+                            // `SaleConsent` (lib/types) es la fuente de verdad del contrato legal.
+                            const consent: SaleConsent = {
+                              privacy: true,
+                              terms: true,
+                              acceptedAt: new Date().toISOString(),
+                            };
                             const res = await fetch("/api/process-payment", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
@@ -531,7 +508,7 @@ export default function CartDrawer() {
                                 },
                                 total: finalTotal,
                                 vipCode: promoCode,
-                                consent: { privacy: true, terms: true, acceptedAt: new Date().toISOString() },
+                                consent,
                               }),
                             });
                             const data = await res.json();

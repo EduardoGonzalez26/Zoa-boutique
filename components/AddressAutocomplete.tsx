@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { CheckCircle2, Loader2, MapPin } from "lucide-react";
 
-interface GeocodeResult {
+export interface GeocodeResult {
   label: string;
   street: string;
   colonia: string;
@@ -34,6 +34,39 @@ interface AddressAutocompleteProps {
 
 const MIN_QUERY = 4;
 
+/** Contrato de `GET /api/geocode`: `{ results: GeocodeResult[] }`. */
+interface GeocodeResponse {
+  results?: unknown;
+}
+
+const text = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+
+/**
+ * Normaliza la respuesta del proxy interno: descarta entradas sin calle ni
+ * etiqueta y garantiza que todos los campos de texto existan. Ante un contrato
+ * inesperado devuelve `[]`, de modo que la UI cae al modo manual.
+ */
+function normalizeResults(payload: unknown): GeocodeResult[] {
+  if (!payload || typeof payload !== "object") return [];
+  const results = (payload as GeocodeResponse).results;
+  if (!Array.isArray(results)) return [];
+  return results.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const raw = entry as Record<string, unknown>;
+    const street = text(raw.street);
+    const label = text(raw.label);
+    if (!street && !label) return [];
+    return [{
+      label,
+      street,
+      colonia: text(raw.colonia),
+      city: text(raw.city),
+      state: text(raw.state),
+      zip: text(raw.zip),
+    }];
+  });
+}
+
 /**
  * Búsqueda explícita de direcciones (sin autocomplete por tecleo):
  * el usuario dispara la consulta con el botón "Buscar dirección" o Enter.
@@ -59,6 +92,7 @@ export default function AddressAutocomplete({
   const [status, setStatus] = useState<{ kind: "info" | "error"; text: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
   const listboxId = useId();
   const optionId = (i: number) => `${listboxId}-option-${i}`;
 
@@ -73,6 +107,9 @@ export default function AddressAutocomplete({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Cancela la consulta en vuelo al desmontar el componente.
+  useEffect(() => () => requestRef.current?.abort(), []);
+
   const search = async () => {
     const query = value.trim();
     if (query.length < MIN_QUERY) {
@@ -83,14 +120,21 @@ export default function AddressAutocomplete({
       setAnnouncement(`Escribe al menos ${MIN_QUERY} caracteres para buscar direcciones.`);
       return;
     }
+
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+
     setLoading(true);
     setStatus(null);
     setAnnouncement("Buscando direcciones…");
     try {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
-      if (!res.ok) throw new Error("geocode");
-      const data = (await res.json()) as { results?: GeocodeResult[] };
-      const found = Array.isArray(data.results) ? data.results : [];
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`geocode ${res.status}`);
+      const found = normalizeResults(await res.json());
       setResults(found);
       setActiveIndex(found.length > 0 ? 0 : -1);
       setOpen(found.length > 0);
@@ -104,19 +148,28 @@ export default function AddressAutocomplete({
         );
       }
     } catch {
+      if (controller.signal.aborted) return;
       setResults([]);
       setOpen(false);
       setActiveIndex(-1);
       setStatus({ kind: "error", text: "No pudimos buscar direcciones. Escribe la dirección a mano." });
       setAnnouncement("Error al buscar direcciones. Puedes escribir la dirección a mano.");
     } finally {
-      setLoading(false);
-      // Devuelve el foco al input para que las flechas/Enter operen la lista.
-      inputRef.current?.focus({ preventScroll: true });
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          // Devuelve el foco al input para que las flechas/Enter operen la lista.
+          inputRef.current?.focus({ preventScroll: true });
+        }
+      }
     }
   };
 
   const handleChange = (v: string) => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLoading(false);
     onChange(v);
     setResults([]);
     setOpen(false);
@@ -126,6 +179,9 @@ export default function AddressAutocomplete({
   };
 
   const handleSelect = (r: GeocodeResult) => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setLoading(false);
     const street = (r.street || r.label || "").trim();
     onChange(street);
     onSelect({
@@ -190,6 +246,7 @@ export default function AddressAutocomplete({
           aria-expanded={listOpen}
           aria-controls={listboxId}
           aria-autocomplete="list"
+          aria-busy={loading}
           aria-activedescendant={listOpen && activeIndex >= 0 ? optionId(activeIndex) : undefined}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
@@ -222,7 +279,7 @@ export default function AddressAutocomplete({
           disabled={loading}
           className="min-h-9 cursor-pointer border border-zoa-line-strong px-3 font-sans text-[9px] uppercase tracking-[0.14em] text-zoa-slate transition-colors duration-200 hover:border-zoa-slate hover:bg-zoa-slate/5 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zoa-slate"
         >
-          Buscar dirección
+          {loading ? "Buscando…" : "Buscar dirección"}
         </button>
         {selected && (
           <span className="inline-flex items-center gap-1.5 font-sans text-[10px] text-zoa-success">

@@ -1,21 +1,36 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Zoa — Desglose de precios del pedido (fuente única)
 //
-//  Server-safe y puro: sin React, sin I/O y sin dependencias de cliente.
-//  Lo consume el backend (process-payment); el carrito replica la misma regla
-//  para que el total mostrado y el cobrado coincidan.
+//  Server-safe y puro: sin React y sin I/O. Lo consume el backend
+//  (process-payment); el carrito replica la misma regla para que el total
+//  mostrado y el cobrado coincidan.
 //
 //  Reglas:
 //  - `subtotal` = suma de precio final × cantidad.
 //  - `eligibleSubtotal` = solo piezas sin descuento propio (product.discount).
-//  - `discount` = % de la campaña activa sobre la base elegible.
-//  - `shipping` = regla de lib/shipping.ts sobre el subtotal ANTES del cupón.
-//  - VIP (PROBADOR) y envío gratis (ENTREAMIGAS) NO se manejan aquí.
+//  - `discount` = campaña activa o cupón legacy previamente validado en servidor.
+//  - `shipping` = regla de lib/shipping.ts sobre el subtotal ANTES del descuento.
+//  - VIP (PROBADOR) cobra un depósito fijo y no lleva envío ni descuentos.
+//  - Envío gratis (ENTREAMIGAS) cero el envío, sin tocar el descuento.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { CartItem } from "./types";
 import { FREE_SHIPPING_THRESHOLD, SHIPPING_FLAT } from "./shipping";
 import { getPromoByCode, isPromoActive, type Promo } from "./promotions";
+
+/** Código y monto del depósito VIP «Probador a domicilio». */
+export const VIP_CODE = "PROBADOR";
+export const VIP_DEPOSIT_AMOUNT = 300; // MXN
+
+/** Cupón legacy de Apps Script ya validado por el servidor. */
+export interface AppliedCoupon {
+  code: string;
+  type: "porcentaje" | "fijo";
+  /** Porcentaje (0–100) o monto fijo en MXN, según `type`. */
+  value: number;
+  /** "eligible" excluye piezas con descuento propio. */
+  scope: "all" | "eligible";
+}
 
 export interface OrderBreakdown {
   subtotal: number;
@@ -23,8 +38,12 @@ export interface OrderBreakdown {
   discount: number;
   shipping: number;
   total: number;
-  /** Campaña aplicada (solo si el código existe y está dentro de su ventana). */
+  /** Campaña aplicada (solo si el código existe, está habilitada y vigente). */
   promo?: Promo;
+  /** Cupón legacy aplicado (solo si fue validado en servidor). */
+  coupon?: AppliedCoupon;
+  isVip: boolean;
+  freeShipping: boolean;
 }
 
 export interface OrderBreakdownOptions {
@@ -32,11 +51,21 @@ export interface OrderBreakdownOptions {
   promoCode?: string;
   /** Fecha de evaluación (America/Mexico_City); por defecto, el reloj real. */
   now?: Date;
+  /** Código PROBADOR: depósito fijo, sin envío ni descuentos. */
+  vip?: boolean;
+  /** Código ENTREAMIGAS: envío gratis. */
+  freeShipping?: boolean;
+  /** Cupón legacy ya validado contra Apps Script. */
+  legacyCoupon?: AppliedCoupon | null;
 }
 
 /** ¿La pieza ya tiene un descuento propio en el catálogo (columna N)? */
 function hasOwnDiscount(item: CartItem): boolean {
   return (item.product.discount ?? 0) > 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
 export function getOrderBreakdown(
@@ -54,32 +83,67 @@ export function getOrderBreakdown(
     0,
   );
 
+  // El depósito VIP es un cobro fijo: no acumula descuentos ni envío.
+  if (opts.vip) {
+    return {
+      subtotal,
+      eligibleSubtotal,
+      discount: 0,
+      shipping: 0,
+      total: VIP_DEPOSIT_AMOUNT,
+      isVip: true,
+      freeShipping: false,
+    };
+  }
+
   const now = opts.now ?? new Date();
   const requestedPromo = opts.promoCode
     ? getPromoByCode(opts.promoCode)
     : undefined;
   const promo =
-    requestedPromo && isPromoActive(requestedPromo, now)
+    requestedPromo &&
+    requestedPromo.enabled &&
+    isPromoActive(requestedPromo, now)
       ? requestedPromo
       : undefined;
 
+  const coupon = promo ? undefined : (opts.legacyCoupon ?? undefined);
+
   // Todas las campañas actuales excluyen piezas rebajadas; el campo se respeta
   // por si una campaña futura decide aplicar sobre todo el carrito.
-  const discountBase =
+  const campaignBase =
     promo && promo.excludeDiscounted === false ? subtotal : eligibleSubtotal;
-  const discount = promo
-    ? Math.round((discountBase * promo.discount) / 100)
+  const campaignDiscount = promo
+    ? Math.round((campaignBase * promo.discount) / 100)
     : 0;
 
+  let couponDiscount = 0;
+  if (coupon) {
+    const couponBase = coupon.scope === "eligible" ? eligibleSubtotal : subtotal;
+    if (coupon.type === "porcentaje") {
+      couponDiscount = Math.round(
+        (couponBase * clamp(coupon.value, 0, 100)) / 100,
+      );
+    } else {
+      couponDiscount = Math.round(clamp(coupon.value, 0, couponBase));
+    }
+  }
+
+  const discount = clamp(campaignDiscount + couponDiscount, 0, subtotal);
   const shipping =
-    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FLAT;
+    opts.freeShipping || subtotal >= FREE_SHIPPING_THRESHOLD
+      ? 0
+      : SHIPPING_FLAT;
 
   return {
     subtotal,
     eligibleSubtotal,
     discount,
     shipping,
-    total: subtotal - discount + shipping,
-    promo,
+    total: Math.max(0, subtotal - discount + shipping),
+    ...(promo ? { promo } : {}),
+    ...(coupon ? { coupon } : {}),
+    isVip: false,
+    freeShipping: opts.freeShipping === true,
   };
 }

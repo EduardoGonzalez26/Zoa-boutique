@@ -18,7 +18,13 @@ interface CartState {
   // ── Data ──────────────────────────────────────────────────────────────────
   items: CartItem[];
   vipCode: string;
-  couponDiscount: number; // % off (0-100)
+  /**
+   * Valor del cupón según `couponType`:
+   * - "porcentaje": porcentaje (0-100).
+   * - "fijo": monto en MXN.
+   * - "interno" / "envio-gratis" / "": sin descuento monetario (0).
+   */
+  couponDiscount: number;
   couponType: string; // "porcentaje" | "fijo" | "interno" | ""
   /** "eligible" excluye piezas con descuento propio (campañas). */
   couponScope: CouponScope;
@@ -39,7 +45,14 @@ interface CartState {
   removeItem: (productId: string, size: Size) => void;
   updateQuantity: (productId: string, size: Size, quantity: number) => void;
   setVipCode: (code: string) => void;
-  setCouponDiscount: (pct: number, type: string, scope?: CouponScope) => void;
+  /**
+   * Guarda el cupón activo.
+   * @param value Porcentaje 0-100 si `type === "porcentaje"`; monto en MXN si
+   *              `type === "fijo"`; ignorado para "interno"/"envio-gratis".
+   * @param type "porcentaje" | "fijo" | "interno" | "" (u otros códigos locales).
+   * @param scope "eligible" limita la base a piezas sin descuento propio.
+   */
+  setCouponDiscount: (value: number, type: string, scope?: CouponScope) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
@@ -73,10 +86,13 @@ export const useCartStore = create<CartState>()(
       },
 
       discountAmount: () => {
-        const pct = get().couponDiscount;
-        if (!pct) return 0;
+        const { couponDiscount, couponType, couponScope } = get();
+        const value = Number(couponDiscount);
+        if (!Number.isFinite(value) || value <= 0) return 0;
+
+        // Base elegible: excluye piezas con descuento propio (campañas).
         const base =
-          get().couponScope === "eligible"
+          couponScope === "eligible"
             ? get().items.reduce(
                 (sum, item) =>
                   (item.product.discount ?? 0) > 0
@@ -85,7 +101,22 @@ export const useCartStore = create<CartState>()(
                 0,
               )
             : get().subtotal();
-        return Math.round((base * pct) / 100);
+
+        if (base <= 0) return 0;
+
+        switch (couponType) {
+          case "fijo":
+            // `value` ya está en MXN; nunca descuenta más que la base.
+            return Math.min(Math.round(value), Math.round(base));
+          case "porcentaje":
+            // `value` es porcentaje; se acota a 0-100.
+            return Math.round((base * Math.min(value, 100)) / 100);
+          case "interno":
+            // VENDIDO y otros códigos internos no son descuentos.
+            return 0;
+          default:
+            return 0;
+        }
       },
 
       total: () => {
@@ -161,8 +192,16 @@ export const useCartStore = create<CartState>()(
       },
 
       setVipCode: (code) => set({ vipCode: code }),
-      setCouponDiscount: (pct, type, scope = "all") =>
-        set({ couponDiscount: pct, couponType: type, couponScope: scope }),
+      setCouponDiscount: (value, type, scope = "all") => {
+        const numericValue = Number(value);
+        set({
+          couponDiscount: Number.isFinite(numericValue)
+            ? Math.max(0, numericValue)
+            : 0,
+          couponType: type,
+          couponScope: scope,
+        });
+      },
 
       clearCart: () =>
         set({

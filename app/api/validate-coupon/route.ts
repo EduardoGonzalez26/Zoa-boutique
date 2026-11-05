@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     // Campañas: resolución local, nunca Apps Script.
     if (promo) {
-      if (!isPromoActive(promo, getZoaNow())) {
+      if (!promo.enabled || !isPromoActive(promo, getZoaNow())) {
         return NextResponse.json({
           ok: false,
           error: "Este código solo está activo durante su campaña.",

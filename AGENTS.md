@@ -1,47 +1,89 @@
 # AGENTS.md — Zoa Boutique
 
-E-commerce Next.js 16 (App Router) + React 19 + TypeScript strict + Tailwind v4 + Zustand. Catalog CMS is a public Google Sheet; payments via MercadoPago; shipping via Skydropx; email via Resend. Deploy target: Railway (self-hosted; `origin` = `EduardoGonzalez26/Zoa-boutique`, branch `main`). UI copy and code comments are Spanish (MX). Dynamic route `params`/`searchParams` are Promises (Next 16).
+E-commerce Next.js 16 (App Router) + React 19 + TypeScript strict + Tailwind v4 + Zustand. Catálogo desde Google Sheets, pagos con MercadoPago, envíos con Skydropx y correos con Resend. **Deploy: Railway** (`origin` = `EduardoGonzalez26/Zoa-boutique`, rama `main`). UI y comentarios en español (MX). `params`/`searchParams` son Promises (Next 16).
 
-**Read `MEMORIA.md` first** — session state, ADRs, pending work. For UI/design tasks also read `design-system/zoa-boutique/MASTER.md` (v4.3), the design source of truth.
+**Lee `MEMORIA.md` primero** — estado real, ADRs y pendientes. **HEAD = `2b338dd`**; el working tree puede tener una sesión de endurecimiento **en curso** (sin commit ni verificación final). No asumas que lo que ves está terminado. Para UI/design, lee `design-system/zoa-boutique/MASTER.md` (v4.3).
 
 ## Commands
+
 - `npm run dev` / `npm run build` / `npm start`
-- `npm run lint` → bare `eslint` over the repo (no args)
-- `npx tsc --noEmit` → typecheck (there is no `typecheck` script)
-- No test framework. Verify changes with `npx tsc --noEmit` + `npm run lint` + `npm run build`.
+- `npm run lint` → `eslint` sin argumentos
+- `npx tsc --noEmit` → typecheck (no hay script `typecheck`)
+- No hay tests. Verifica con `npx tsc --noEmit` + `npm run lint` + `npm run build`.
+- Referencia verde del HEAD: **173/173** (commit `2b338dd`). El working tree actual no tiene verificación final registrada.
 
 ## Data / env
-- `.env*` is gitignored. `.env.local` defines Sheet, MercadoPago (token + both public-key names), Skydropx and Resend keys (values were not all valid — see the MercadoPago bullet); `NEXT_PUBLIC_BASE_URL` is unset locally and metadata falls back to `https://zoa.mx` via `||`.
-- Env vars: `GOOGLE_SHEET_ID` (required — throws if missing), `GOOGLE_SHEET_NAME` (default `Oficial`), `GOOGLE_SHEET_VENTAS` (default `Ventas`), `APPS_SCRIPT_URL`, `MERCADOPAGO_ACCESS_TOKEN`, `NEXT_PUBLIC_MP_PUBLIC_KEY` + `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` (resolved by `lib/mercadopagoPublicKey.ts`; keep both with the same valid key), `SKYDROPX_API_KEY`/`SKYDROPX_API_SECRET`/`SKYDROPX_PICKUP_*`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (Resend sender; fallback `Zoa <hola@zoa.mx>`), `NEXT_PUBLIC_BASE_URL` (metadata; empty → `||` fallback `https://zoa.mx`), `NEXT_PUBLIC_SITE_URL` (fallback `https://zoa.mx`).
-- Emails need a **verified domain** in Resend: `hola@zoa.mx` returned HTTP 403 `validation_error` ("The zoa.mx domain is not verified") on 2026-09-18, so confirmations failed. `RESEND_FROM_EMAIL` overrides the sender (fallback `Zoa <hola@zoa.mx>`). Since 2026-09-18 the flow inspects the Resend SDK result (`value.error`/`reason` on `Promise.allSettled`) and `res.ok` on the `payment-success` webhook, logging failures and returning 502 (previously it failed silently).
-- MercadoPago public key: `lib/mercadopagoPublicKey.ts` is the single source (`MP_PUBLIC_KEY`, isomorphic). It only accepts real Public Keys (`APP_USR-…` prod / `TEST-…` test): Application IDs (UUIDs) and empty values are ignored, and if neither name holds a valid key it returns `""` so the Brick shows the explicit "not configured" error instead of failing silently. Keep the `process.env.NEXT_PUBLIC_*` reads literal in that module so Next inlines them client-side. Consumers (`MercadoPagoWrapper`, `MercadoPagoBrick`, `app/checkout/page.tsx`) import from it; `next.config.ts` still injects both names. On Railway, keep both `NEXT_PUBLIC_MP_PUBLIC_KEY` and `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` with the SAME valid `APP_USR-…`/`TEST-…` key (the module tolerates one being wrong/empty, but that hides misconfiguration) and redeploy after changing them (inlined at build). A wrong value made the Brick fail to render silently (broke `/checkout` until 2026-09-18).
-- Google Sheet `Oficial` columns A–T are hardcoded in `lib/googleSheets.ts`; `NUM` (col A) is the product ID, `SKU` is display-only. Reads use the public CSV export with ISR `revalidate = 60`. Writes go through Apps Script (`APPS_SCRIPT_URL`: `deductStock`, `logSale`, coupons, reviews).
-- Best sellers read the `Ventas` tab via the gviz endpoint only — `/export?format=csv&sheet=` silently returns the first tab.
-- Pages intentionally `catch → []` on Sheet failures, so a missing/broken Sheet renders an empty catalog instead of failing the build.
+
+`.env*` está gitignored, con excepción de `.env.example` (plantilla sin valores reales, habilitada con `!.env.example` en el working tree). `.env.local` define Sheet, MercadoPago (token + ambos nombres de public key), Skydropx y Resend; `NEXT_PUBLIC_BASE_URL` cae a `https://zoa.mx` con `||`.
+
+### Requeridas
+
+- `GOOGLE_SHEET_ID` — obligatoria; el módulo falla si falta. No hay fallback hardcodeado.
+- `GOOGLE_SHEET_NAME` — default `Oficial`; `GOOGLE_SHEET_VENTAS` — default `Ventas`.
+- `APPS_SCRIPT_URL` — stock, ventas, cupones legacy y reseñas. Compartido con Carmeli.
+- `MERCADOPAGO_ACCESS_TOKEN`.
+- `NEXT_PUBLIC_MP_PUBLIC_KEY` **y** `NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY` — resueltas por `lib/mercadopagoPublicKey.ts`; solo acepta `APP_USR-…`/`TEST-…`, ignora Application IDs (UUID) y vacíos. Mantén ambas con la misma llave válida y redeploya (se inlinean en build).
+- `NEXT_PUBLIC_BASE_URL` / `NEXT_PUBLIC_SITE_URL` — metadata/URLs; fallback `https://zoa.mx`.
+- `SKYDROPX_API_KEY` / `SKYDROPX_API_SECRET` / `SKYDROPX_PICKUP_*`.
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL` — remitente de un dominio verificado en Resend; fallback `Zoa <hola@zoa.mx>`.
+
+### Solo development
+
+- `PROMO_PREVIEW=<amor|madres|buenfin|navidad>` — fuerza campaña.
+- `PROMO_NOW=<ISO 8601>` — simula el reloj de `America/Mexico_City`.
+
+En production se ignoran.
+
+### En curso (working tree; confirmar antes de deploy)
+
+- `INTERNAL_API_SECRET` — header `x-internal-secret` para `/api/vendido`, `/api/debug-sheet` y `/api/debug-skydropx`.
+- `INTERNAL_WEBHOOK_SECRET` — header `x-internal-secret` para `/api/webhooks/payment-success`.
+- `MERCADOPAGO_WEBHOOK_SECRET` — verificación de firma del webhook, si el código final la exige.
+- `GEOCODE_USER_AGENT` — opcional; User-Agent del proxy Nominatim (`/api/geocode`).
+
+Sin estos secretos, el working tree falla cerrado en producción (404/401/503). No los omitas.
+
+## Pricing / promotions (fuente única)
+
+- `lib/promotions.ts` — **server-only**; no importar desde `"use client"`. Define 4 campañas (`amor`, `madres`, `buenfin`, `navidad`), 15% OFF, ventanas inclusivas en `America/Mexico_City`; `navidad` cruza el año. `getActivePromo()`, `getPromoByCode()`, `isPromoActive()`. `PROMO_PREVIEW`/`PROMO_NOW` solo en development.
+- `lib/pricing.ts` — **server-safe y puro**; `getOrderBreakdown(items, opts)` calcula subtotal, base elegible, descuento, envío y total. `VIP_CODE="PROBADOR"`, `VIP_DEPOSIT_AMOUNT=300`. No dupliques la fórmula en el cliente: el carrito replica la regla para mostrar, pero el servidor manda.
+- `lib/shipping.ts` — única fuente de `SHIPPING_FLAT=150`, `FREE_SHIPPING_THRESHOLD=3000`, `FREE_SHIPPING_CODE="ENTREAMIGAS"`. No re-hardcodees.
+- **Campañas:** se resuelven localmente en `/api/validate-coupon` y en `process-payment`; devuelven `scope: "eligible"` y excluyen piezas con `product.discount`.
+- **Cupones legacy:** siguen viviendo en **Google Apps Script** (`action: "validateCoupon"`). No los migres al cliente. El servidor debe validar el descuento; nunca confíes en `couponDiscount` del payload.
+- **`couponScope`:** `"all"` | `"eligible"` en `store/cartStore.ts`, persistido; las campañas usan `"eligible"`. No lo hardcodees en componentes.
+- **Estado HEAD vs working tree:** en `2b338dd` el servidor recalcula solo cuando hay código de campaña. El working tree extiende la validación a **todos** los pedidos (catálogo/stock frescos, 409 por total). **No está commiteado ni verificado**; no lo describas como cerrado.
+- **Discrepancia:** `design-system/zoa-boutique/pages/home.md` aún dice «Pendiente backend»; el código de `2b338dd` ya valida campañas en checkout. Fuente de verdad: el código; actualizar la página cuando se toque diseño.
+- **Checkout Pro:** existía en HEAD (`app/api/checkout`); el working tree lo elimina. Confirma el flujo final antes de tocar webhooks/back URLs.
 
 ## Payment / checkout flows
-- CartDrawer → Payment Brick (`MercadoPagoWrapper`, dynamic `ssr:false`) → `POST /api/process-payment`: deducts stock, logs sale and creates the Skydropx shipment synchronously, then returns 200; the email is sent in `after()` from `next/server` (works on Railway/self-hosted; `maxDuration = 60` is Vercel-only and ignored on Railway).
-- `/checkout` page imports the Brick directly and calls the same `/api/process-payment`.
-- Checkout Pro: `POST /api/checkout` → MercadoPago webhook `/api/webhooks/mercadopago` (fetches payment, `deductStock`, creates Skydropx shipment, non-fatal) → calls `/api/webhooks/payment-success` to send emails.
-- `POST /api/vendido` is the physical-store sale path (stock + sale log, no payment/shipping).
-- `components/MercadoPagoBrick.tsx` and `app/api/shipping-rates/route.ts` have no callers (dead code); don't copy their patterns.
 
-## Shipping cost (single source of truth)
-`lib/shipping.ts` is the only source: `SHIPPING_FLAT = 150`, `FREE_SHIPPING_THRESHOLD = 3000`, `FREE_SHIPPING_CODE = "ENTREAMIGAS"` (MXN). Import from it; never re-hardcode. Consumers:
-- `store/cartStore.ts` — `shipping()` / `isFreeShipping()`; the code travels in `vipCode`, the same field as VIP code `PROBADOR` ($300 deposit, still separate).
-- `components/CartDrawer.tsx` — resolves `ENTREAMIGAS` locally (no `/api/validate-coupon`, nothing sent to Apps Script), one code at a time (no stacking with coupons/VIP), shows 100% progress bar + "— envío gratis" chip.
-- `app/checkout/page.tsx` — computes shipping and sends `vipCode: activeCode` to `/api/process-payment`.
-- `app/api/checkout/route.ts` — Checkout Pro: `isFreeShipping` zeroes `shipments.cost` without triggering the VIP deposit branch.
-- `app/api/webhooks/payment-success/route.ts` — receipt prints "Gratis".
-Editorial copy still hardcodes `$150` / `≥ $3,000` — update by hand if the constants change: `components/ProductGalleryClient.tsx:677`, `components/Footer.tsx:190`, `app/page.tsx:98,179`.
+- CartDrawer → Payment Brick (`MercadoPagoWrapper`, dynamic `ssr:false`) → `POST /api/process-payment`: valida, descuenta stock, registra venta y crea el envío Skydropx de forma síncrona; el correo sale en `after()` (Railway/self-hosted). `maxDuration=60` es Vercel-only e ignorado en Railway.
+- `/checkout` importa el Brick directamente y usa el mismo `/api/process-payment`.
+- Webhook MP (`/api/webhooks/mercadopago`): en HEAD descuenta stock en cada evento aprobado; el working tree añade `orderId`, marca, dedupe y `pending_fulfillment`.
+- `POST /api/vendido` es venta física (stock + log, sin pago/envío); en el working tree exige `INTERNAL_API_SECRET`.
+- `components/MercadoPagoBrick.tsx` y `app/api/shipping-rates/route.ts` no tienen consumidores claros; no copies sus patrones.
+
+## Shipping cost
+
+`lib/shipping.ts` es la única fuente. Consumidores: `store/cartStore.ts`, `components/CartDrawer.tsx`, `app/checkout/page.tsx`, `app/api/process-payment/route.ts` (vía `lib/pricing.ts`) y `app/api/webhooks/payment-success/route.ts`. El copy editorial aún puede hardcodear `$150`/`≥$3,000`; actualízalo a mano si cambian las constantes.
 
 ## UI rules (MASTER v4.3)
-- Tokens live in `app/globals.css` (`@theme static`); reuse `components/ui/` kit (Button, Reveal, ImageReveal, SectionHeader, Overline, Chip, Accordion, EmptyState, `useMounted`). No pure `#FFFFFF`; formulas: exactly 1 forest (`#003628`) full-bleed band per page, max 1 wine band.
-- Hydration law: never call `useReducedMotion()` directly in render; use `const rm = mounted && reduceMotion` with `components/ui/useMounted.ts`. `app/template.tsx` must stay pure CSS. Zero hydration warnings is an invariant.
-- MASTER scope rule: design work must not touch `app/api/**`, `lib/**`, `store/**`, `sitemap.ts`, `next.config.ts`, `package.json`, or add dependencies.
 
-## Traps
-- Debug routes are public in production: `/api/debug-sheet` and `/api/debug-skydropx?secret=zoa_debug` (hardcoded secret).
-- Known broken links still pending: `/colecciones/*` and `/checkout/pending` (see `MEMORIA.md` §7).
-- `.tmp-qa/` holds local Chrome QA artifacts: ignored by git and ESLint since 2026-09-18 (`.gitignore` + `globalIgnores`); its 676 files were purged from `main` by rewriting `c1c7c27` (force-push with lease). Manual follow-ups (dangling GitHub objects, credential rotation) in `MEMORIA.md` §7 (item 1).
-- `next.config.ts` allows remote images only from `res.cloudinary.com` (plus Unsplash fallback).
+- Tokens en `app/globals.css` (`@theme static`); reutiliza `components/ui/` (Button, Reveal, ImageReveal, SectionHeader, Overline, Chip, Accordion, EmptyState, `PromoCode`, `useFocusTrap`, `useMounted`).
+- Sin `#FFFFFF`; exactamente **1 banda forest** (`#003628`) full-bleed por página; máximo **1 wine** (la promo condicional de la home). La home usa Marquee forest y CTABanner slate.
+- A11y: contraste AA (tokens 2026-10-26), skip link, focus trap, `PromoCode` con `aria-live`, `Marquee` pausa al enfocar. Mantén foco visible y touch targets ≥44 px.
+- Hidratación: nunca `useReducedMotion()` directo en render; `rm = mounted && reduceMotion`; `template.tsx` CSS puro; 0 warnings es invariante.
+- Regla de alcance del MASTER: diseño no toca `app/api/**`, `lib/**`, `store/**`, `sitemap.ts`, `next.config.ts`, `package.json` ni añade dependencias.
+
+## Traps / seguridad
+
+- **Endpoint de geocode:** en HEAD no existía `/api/geocode` aunque `AddressAutocomplete` lo llamaba. El working tree lo añade; verifica rate limit, User-Agent y fallback manual antes de confiar.
+- **Consentimiento:** en HEAD el checkbox existe y el POST incluía `consent`, pero el API lo ignoraba. El working tree lo persiste; exige columnas nuevas en Apps Script. No lo llames “cumplido” hasta verificar el log.
+- **Idempotencia:** el dedupe en memoria no cubre varias instancias. La barrera atómica debe estar en Apps Script por `orderId`; sin eso, un reintento del webhook puede descontar stock dos veces.
+- **Debug routes:** en HEAD `/api/debug-sheet` estaba abierto y `/api/debug-skydropx` usaba un secreto hardcodeado en el código. El working tree exige `INTERNAL_API_SECRET`; configura el env y verifica 404/401 en producción. No reintroduzcas POST en un GET.
+- **MP Public Key:** un Application ID (UUID) en cualquiera de los dos nombres rompe el Brick en silencio. Corrige ambos y redeploya.
+- **Resend:** el remitente debe ser de un dominio verificado. `hola@zoa.mx` falló con 403 el 2026-09-18; define `RESEND_FROM_EMAIL` si el dominio no está verificado. No asumas verificación por el fallback.
+- **Enlaces:** `/colecciones/*` y `/checkout/pending` fueron deuda en HEAD; el working tree migra enlaces y añade la página. Verifica que no queden URLs inválidas en sitemap/blog/footer.
+- **`CARMELI-` en `Ventas`:** la hoja es compartida; en HEAD los pedidos de Carmeli se contaban en best sellers. El working tree filtra `ZOA-…`; verifica con datos reales antes de confiar en el ranking.
+- **`.tmp-qa/`:** artefactos locales de Chrome; gitignored y `globalIgnores` en ESLint. No versionar. No commitear `.env.local` ni `npm-cache/`.
+- **`next.config.ts`:** solo permite imágenes de `res.cloudinary.com` (+ Unsplash fallback). No añadas hosts sin justificarlo.

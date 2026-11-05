@@ -50,7 +50,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
 </ul>
 <p>Este tipo de combinación funciona para el trabajo, para una comida o para una tarde de compras. Versatilidad sobre todo.</p>
 
-<p>Explora nuestra <a href="/colecciones/primavera-verano">colección Primavera / Verano 2026</a> y encuentra las piezas perfectas para esta temporada.</p>
+<p>Explora nuestra <a href="/tienda?coleccion=primavera-verano">colección Primavera / Verano 2026</a> y encuentra las piezas perfectas para esta temporada.</p>
     `.trim(),
   },
   {
@@ -104,7 +104,7 @@ export const BLOG_ARTICLES: BlogArticle[] = [
 </ol>
 <p>Si las tres respuestas son sí, es una buena compra. Si alguna es no, sigue buscando.</p>
 
-<p>Revisa nuestra sección de <a href="/colecciones/esenciales">Esenciales</a> — está curada exactamente con este criterio: piezas que duran, que combinan y que funcionan para mujeres reales.</p>
+<p>Revisa nuestra sección de <a href="/tienda?coleccion=esenciales">Esenciales</a> — está curada exactamente con este criterio: piezas que duran, que combinan y que funcionan para mujeres reales.</p>
     `.trim(),
   },
   {

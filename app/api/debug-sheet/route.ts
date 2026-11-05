@@ -1,10 +1,21 @@
-import { NextResponse } from "next/server";
-import { getProducts } from "@/lib/googleSheets";
+// GET /api/debug-sheet?sku=XXX
+// Diagnóstico interno de solo lectura.
+//
+// Auth: header `x-internal-secret` = INTERNAL_API_SECRET.
+// En production, sin secreto responde 404 (no revela que existe).
 
-// GET /api/debug-sheet
-// Returns the first 10 products + any products matching ?sku=XXX
-// REMOVE this endpoint after debugging.
-export async function GET(req: Request) {
+import { NextRequest, NextResponse } from "next/server";
+import { getProducts } from "@/lib/googleSheets";
+import {
+  isInternalAuthorized,
+  unauthorizedResponse,
+} from "../_lib/internal";
+
+export async function GET(req: NextRequest) {
+  if (!isInternalAuthorized(req, "INTERNAL_API_SECRET")) {
+    return unauthorizedResponse({ notFoundInProduction: true });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const skuQuery = (searchParams.get("sku") ?? "").toLowerCase();
@@ -34,6 +45,10 @@ export async function GET(req: Request) {
       })),
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[debug-sheet] Error:", err);
+    return NextResponse.json(
+      { error: "Internal error" },
+      { status: 500 },
+    );
   }
 }
